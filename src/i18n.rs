@@ -75,14 +75,19 @@ struct Catalog {
 /// visible in the log.
 ///
 /// `configured` is the user's setting: `None` or an empty string means "follow
-/// Windows", which is the default. A configured language with no catalog (or a
-/// system language we do not ship) leaves the UI in English rather than failing.
+/// Windows", which is the default and is resolved by [`follow_windows`]. A
+/// configured language we ship no catalog for leaves the UI in English rather
+/// than failing.
 pub fn init(configured: Option<&str>) {
     let wanted = match configured.map(str::trim).filter(|s| !s.is_empty()) {
         Some(explicit) => explicit.to_string(),
         None => {
-            let system = system_language();
-            log::info!("No language configured; following Windows, which reports {system}");
+            let preferred = preferred_ui_languages();
+            let system = follow_windows(&preferred);
+            log::info!(
+                "No language configured; Windows displays in [{}], so the interface follows {system}",
+                preferred.join(", ")
+            );
             system
         }
     };
@@ -117,28 +122,99 @@ pub fn init(configured: Option<&str>) {
     }
 }
 
-/// The language tag Windows reports for the user's interface, such as `es-ES`.
-/// Falls back to `en` if the call fails, which leaves the UI in English.
-fn system_language() -> String {
-    use windows::Win32::Globalization::GetUserDefaultLocaleName;
-    let mut buf = [0u16; 85]; // LOCALE_NAME_MAX_LENGTH
-    let len = unsafe { GetUserDefaultLocaleName(&mut buf) };
-    if len <= 0 {
-        return "en".to_string();
+/// The display languages Windows reports for the user, best first — `["es-ES",
+/// "en-US"]`. Empty when the call fails, which leaves the interface in English.
+///
+/// This is deliberately `GetUserPreferredUILanguages` and **not**
+/// `GetUserDefaultLocaleName`. The latter answers a different question: it is
+/// the *regional format* setting — the one that decides how dates, numbers and
+/// currency are written — and Windows lets it differ from the language the
+/// system is displayed in. Someone running an English Windows who has set
+/// Spanish regional formats is asking for `31/12/2025`, not for a Spanish
+/// interface, and "Follow Windows" that reads the format setting would hand
+/// them one anyway.
+fn preferred_ui_languages() -> Vec<String> {
+    use windows::Win32::Globalization::{GetUserPreferredUILanguages, MUI_LANGUAGE_NAME};
+    use windows_core::PWSTR;
+    let mut count = 0u32;
+    let mut chars = 0u32;
+    // The first call sizes the buffer; `chars` comes back as the whole
+    // multi-string's length, per-tag nulls and final terminator included.
+    let sized =
+        unsafe { GetUserPreferredUILanguages(MUI_LANGUAGE_NAME, &mut count, None, &mut chars) };
+    if sized.is_err() || chars == 0 {
+        return Vec::new();
     }
-    // The count includes the terminating null.
-    String::from_utf16_lossy(&buf[..(len as usize).saturating_sub(1)])
+    let mut buf = vec![0u16; chars as usize];
+    let filled = unsafe {
+        GetUserPreferredUILanguages(
+            MUI_LANGUAGE_NAME,
+            &mut count,
+            Some(PWSTR(buf.as_mut_ptr())),
+            &mut chars,
+        )
+    };
+    if filled.is_err() {
+        return Vec::new();
+    }
+    split_multi_string(&buf)
+}
+
+/// Splits a double-null-terminated Windows multi-string into its parts. The
+/// empty run that ends it is what stops the walk, so trailing slack in an
+/// over-long buffer is never read as a language.
+fn split_multi_string(buf: &[u16]) -> Vec<String> {
+    buf.split(|&c| c == 0)
+        .take_while(|part| !part.is_empty())
+        .map(String::from_utf16_lossy)
+        .collect()
+}
+
+/// The language to follow when the user has not chosen one: the first of
+/// Windows' display languages that Pubsplash actually ships an interface for,
+/// or English when it ships none of them.
+///
+/// Walking the whole list rather than taking its head is the point of having a
+/// list: a user whose display languages are French then Spanish gets Spanish
+/// from us, because Spanish is the first entry we can honour. English always
+/// terminates the search, since English is a shipped language — an English
+/// Windows with Spanish second does not land in Spanish.
+fn follow_windows(preferred: &[String]) -> String {
+    preferred
+        .iter()
+        .find_map(|tag| shipped_language(tag))
+        .unwrap_or("en")
+        .to_string()
+}
+
+/// The shipped language a tag asks for, or `None` for one we do not offer.
+/// Matches the base language when the exact region is not listed, on the same
+/// grounds as [`best_match`]; unlike that function it answers for English too,
+/// which has no catalog but is very much a language we ship.
+fn shipped_language(tag: &str) -> Option<&'static str> {
+    let (tag, base) = normalize_tag(tag);
+    LANGUAGES
+        .iter()
+        .find(|(code, _)| *code == tag || *code == base)
+        .map(|(code, _)| *code)
+}
+
+/// Lower-cases a language tag and settles on one separator, returning it with
+/// its base language — `ES_mx` becomes `("es-mx", "es")`.
+fn normalize_tag(tag: &str) -> (String, String) {
+    let lower = tag.trim().to_ascii_lowercase().replace('_', "-");
+    let base = lower.split('-').next().unwrap_or("").to_string();
+    (lower, base)
 }
 
 /// Picks the catalog for a language tag, matching the base language when the
 /// exact region is not shipped — `es-AR`, `es_MX` and `es` all land on `es`,
 /// which is the whole point of shipping one Spanish rather than twenty.
 fn best_match(tag: &str) -> Option<(&'static str, &'static str)> {
-    let lower = tag.trim().to_ascii_lowercase().replace('_', "-");
-    let base = lower.split('-').next().unwrap_or("").to_string();
+    let (tag, base) = normalize_tag(tag);
     CATALOGS
         .iter()
-        .find(|(code, _)| *code == lower || *code == base)
+        .find(|(code, _)| *code == tag || *code == base)
         .map(|(code, source)| (*code, *source))
 }
 
@@ -979,6 +1055,56 @@ msgstr[1] "{n} oyentes"
         }
         assert_eq!(best_match("en-GB").map(|(c, _)| c), None);
         assert_eq!(best_match("ja").map(|(c, _)| c), None);
+    }
+
+    #[test]
+    fn follow_windows_takes_the_first_language_we_ship() {
+        // The whole point of reading the list rather than its head: a display
+        // language we do not have is skipped, not answered with English.
+        let list =
+            |tags: &[&str]| follow_windows(&tags.iter().map(|t| t.to_string()).collect::<Vec<_>>());
+        assert_eq!(list(&["fr-FR", "es-ES", "en-US"]), "es");
+        assert_eq!(list(&["es-MX"]), "es");
+        // English is a shipped language, so it stops the search — an English
+        // Windows with Spanish listed second must not come up Spanish.
+        assert_eq!(list(&["en-GB", "es-ES"]), "en");
+        // Nothing we ship, and nothing at all (a failed call), are both English.
+        assert_eq!(list(&["ja-JP", "de-DE"]), "en");
+        assert_eq!(list(&[]), "en");
+    }
+
+    #[test]
+    fn a_multi_string_ends_at_its_terminator() {
+        // `GetUserPreferredUILanguages` fills a double-null-terminated buffer,
+        // and the slack past the terminator must never read as a language.
+        let buf: Vec<u16> = "es-ES\0en-US\0\0\0\0".encode_utf16().collect();
+        assert_eq!(split_multi_string(&buf), ["es-ES", "en-US"]);
+        assert!(split_multi_string(&[0, 0]).is_empty());
+        assert!(split_multi_string(&[]).is_empty());
+    }
+
+    #[test]
+    #[ignore = "reads this machine's real Windows language settings"]
+    fn windows_reports_its_display_languages() {
+        // The two-call buffer protocol is the part that can be wrong without
+        // anything complaining: a mis-sized buffer returns an empty list, which
+        // reads as "English" and looks exactly like a correctly-followed
+        // English Windows. Run this on a machine and read the output.
+        let preferred = preferred_ui_languages();
+        println!(
+            "preferred UI languages: {preferred:?} -> {}",
+            follow_windows(&preferred)
+        );
+        assert!(
+            !preferred.is_empty(),
+            "Windows reported no display language"
+        );
+        for tag in &preferred {
+            assert!(
+                tag.contains(|c: char| c.is_ascii_alphabetic()),
+                "{tag:?} does not look like a language tag"
+            );
+        }
     }
 
     #[test]
