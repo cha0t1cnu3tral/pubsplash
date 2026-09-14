@@ -4,6 +4,12 @@
 
 ### Additions
 
+- Added interface localization with embedded message catalogs and Spanish translations.
+
+- Added an interface-language setting that can follow supported Windows display languages.
+
+- Added the `gen-po` catalog generation and validation tool.
+
 ### Fixes
 
 ### Changes

@@ -24,6 +24,33 @@ Pubsplash's interface has **no `&` mnemonics**, anywhere — not on buttons, che
 - Deliberate keyboard shortcuts belong in the user keybind system (`keybind.rs` / `ui/keybinds.rs`) or as a menu accelerator after the `\t` in a menu item's label (e.g. `"Preferences...\tCtrl+,"`), never as a mnemonic.
 - A **literal** ampersand in a label still has to be doubled (`"Logging && debugging"`), because wx parses labels for mnemonics regardless. That is an escape, not a mnemonic, and is the only `&` allowed in a label.
 
+## Translations
+
+The interface is translated. `src/i18n.rs` holds the machinery and its header explains the design; these are the rules a change set has to follow.
+
+**Every string a user can see or hear goes through `t!` or `tn!`.** That includes labels, dialog titles and messages, list rows, accessible names installed by hand, spoken announcements, and any `Err(String)` that reaches a message box.
+
+- The argument must be a **literal**. `cargo run --bin gen-po` finds translatable text by scanning for these call sites, so `t!(some_variable)` is invisible to it and would silently never be translated.
+- Use `tn!(singular, plural, n)` for anything counted. Do not build a plural by appending an "s" — most languages do not work that way.
+- Placeholders are named (`{path}`, not `{}`) so a translator can reorder them, which Spanish routinely needs to.
+- Compose whole phrases rather than slotting a word into a frame. `"{base} and recording"` beats `"{base} and {word}"`: languages agree the second half with the first, and a lone word gives the translator nothing to agree with.
+
+**These are deliberately never translated**, and each has bitten once:
+
+- **Log lines.** Users are asked to send their log when something goes wrong; a log the maintainer cannot read is not a diagnostic. `chat_feed_line`, `server_state_line` and `audio_link_line` in `ui/mod.rs` exist only to be logged and must stay English, even though they read like user-facing prose.
+- **`SourceConfig.name` and `SourceKindConfig::type_display_name`.** That name is an identity key — it routes `ExternalFeeds` and keys TTS speech requests — so a source created in Spanish would not match the same source created in English. What the user actually sees is built by `source_name`, which *is* translated.
+- **Both arguments of `help::tag`.** The first is a key into `help.toml`; the second is a note for whoever writes that file.
+- Panic and `expect` messages, protocol strings, config keys, URLs, and file paths.
+
+**Never read a widget's text back and compare it to an English literal.** Key on the selection index instead. `scenes::model_choice_value` used to test a combo box against `"Provider default"`, which stops matching the moment the row is Spanish; anything decorating a row that has to be parsed off again (see `unavailable_suffix`) must be built and stripped from the same translated string.
+
+**Run `cargo run --bin gen-po` in the same change set**, and commit the updated `po/`. It rescans the source and `help.toml`, adds new messages with an empty translation, keeps every translation already written, preserves departed messages as commented-out `#~` entries, and warns about any translation that has lost or invented a placeholder. An empty translation is not a bug — the msgid is the English text, so an untranslated message shows its English original — but fill in the Spanish for anything you add, or say in your summary that you left it English.
+
+Other notes:
+
+- A shipped standalone binary that needs `t!` gets `#[path = "../i18n.rs"] mod i18n;`, as `soundpack_manager.rs` does. That file is the crate root there, so it must **not** `use crate::t;` — a `#[macro_export]` macro already lives at the crate root and importing it again is a redefinition.
+- Adding a language is a `.po` under `po/`, a row in `i18n::LANGUAGES`, and a line in `i18n::CATALOGS`. Nothing ships beside the executable; catalogues are embedded.
+
 ## Coding Strategy
 
 - Whenever a decision is reached to accomplish a task by polling, determine if the same task can be done via an event driven approach, if so, prefer it unless there's a good reason not to, then explain why it was done in the summary
@@ -32,3 +59,4 @@ Pubsplash's interface has **no `&` mnemonics**, anywhere — not on buttons, che
 
 - The app version shown in the About dialog comes from `Cargo.toml`; bump it as part of cutting a release.
 - Configuration schema changes must remain backward compatible or handled by the corruption/defaults recovery path in `src/config.rs`; document new settings in the README.
+- A new control needs a context-help message: `cargo run --bin gen-help` adds it to `help.toml` with a blank `message` for you to fill in. A blank one falls back to "No help available for this control." at runtime, so leaving it empty is a visible gap, not a neutral default.
