@@ -12,6 +12,8 @@
 
 ### Fixes
 
+- SAPI 5 voice discovery now includes voices supplied by dynamic token enumerators such as RHVoice.
+
 ### Changes
 
 - Removed the agent policy prohibiting UI mnemonics.

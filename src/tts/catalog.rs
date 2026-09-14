@@ -358,6 +358,7 @@ pub fn discover(engine: &str, speech: &SpeechConfig) -> Result<EngineCatalog, Tt
         engines::SAPI => EngineCatalog::from_voices(
             Vec::new(),
             super::sapi::voice_names()
+                .map_err(|error| TtsError::Other(error.message()))?
                 .into_iter()
                 .map(Voice::plain)
                 .collect(),

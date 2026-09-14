@@ -25,8 +25,9 @@ use windows::Win32::Media::Speech::{
     SpVoice,
 };
 use windows::Win32::System::Com::{
-    CLSCTX_ALL, COINIT_APARTMENTTHREADED, CoCreateInstance, CoInitializeEx, CoTaskMemFree, IStream,
-    STATFLAG_NONAME, STATSTG, STREAM_SEEK_SET, StructuredStorage::CreateStreamOnHGlobal,
+    CLSCTX_ALL, COINIT_APARTMENTTHREADED, CoCreateInstance, CoInitializeEx, CoTaskMemFree,
+    CoUninitialize, IStream, STATFLAG_NONAME, STATSTG, STREAM_SEEK_SET,
+    StructuredStorage::CreateStreamOnHGlobal,
 };
 use windows::core::{GUID, PCWSTR};
 
@@ -35,30 +36,62 @@ const SPCAT_VOICES: &str = r"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech\Voices
 const SPDFID_WAVEFORMATEX: GUID = GUID::from_u128(0xC31ADBAE_527F_4FF5_A230_F62BB61FF70C);
 const WAVE_FORMAT_PCM: u16 = 1;
 
-/// Installed SAPI voice display names.
-pub fn voice_names() -> Vec<String> {
-    let mut voices = Vec::new();
-    let output = std::process::Command::new("reg")
-        .args([
-            "query",
-            r"HKLM\SOFTWARE\Microsoft\Speech\Voices\Tokens",
-            "/s",
-            "/ve",
-        ])
-        .output();
-    if let Ok(output) = output {
-        let text = String::from_utf8_lossy(&output.stdout);
-        for line in text.lines() {
-            let line = line.trim();
-            if let Some(rest) = line.strip_prefix("(Default)") {
-                let value = rest.trim().trim_start_matches("REG_SZ").trim();
-                if !value.is_empty() && !voices.contains(&value.to_string()) {
-                    voices.push(value.to_string());
-                }
-            }
-        }
+/// Installed SAPI voice display names, including voices supplied by dynamic
+/// token enumerators rather than static registry entries.
+pub fn voice_names() -> windows::core::Result<Vec<String>> {
+    // Catalog discovery runs on a fresh worker thread. SAPI is COM-based, so
+    // that thread needs its own apartment for the duration of the call.
+    let _apartment = ComApartment::sta()?;
+    enumerate_voice_tokens().map(|tokens| tokens.iter().map(voice_token_description).collect())
+}
+
+struct ComApartment;
+
+impl ComApartment {
+    fn sta() -> windows::core::Result<Self> {
+        unsafe { CoInitializeEx(None, COINIT_APARTMENTTHREADED).ok()? };
+        Ok(Self)
     }
-    voices
+}
+
+impl Drop for ComApartment {
+    fn drop(&mut self) {
+        unsafe { CoUninitialize() };
+    }
+}
+
+/// Asks SAPI for the complete voice category. This matters for engines such as
+/// RHVoice, which register a `TokenEnums` COM provider and create their tokens
+/// on demand instead of storing one registry key per voice.
+fn enumerate_voice_tokens() -> windows::core::Result<Vec<ISpObjectToken>> {
+    unsafe {
+        let category: ISpObjectTokenCategory =
+            CoCreateInstance(&SpObjectTokenCategory, None, CLSCTX_ALL)?;
+        let id = wide(SPCAT_VOICES);
+        category.SetId(PCWSTR(id.as_ptr()), false)?;
+        let enumerator = category.EnumTokens(PCWSTR::null(), PCWSTR::null())?;
+        let mut tokens = Vec::new();
+        loop {
+            let mut token = None;
+            enumerator.Next(1, &mut token, None)?;
+            let Some(token) = token else {
+                break;
+            };
+            tokens.push(token);
+        }
+        Ok(tokens)
+    }
+}
+
+fn voice_token_description(token: &ISpObjectToken) -> String {
+    unsafe {
+        let Ok(description) = token.GetStringValue(PCWSTR::null()) else {
+            return String::new();
+        };
+        let text = description.to_string().unwrap_or_default();
+        CoTaskMemFree(Some(description.as_ptr() as *const _));
+        text
+    }
 }
 
 /// One utterance for the apartment thread.
@@ -257,28 +290,10 @@ unsafe fn find_voice_token(name: &str) -> Option<ISpObjectToken> {
     if name.is_empty() {
         return None;
     }
-    unsafe {
-        let category: ISpObjectTokenCategory =
-            CoCreateInstance(&SpObjectTokenCategory, None, CLSCTX_ALL).ok()?;
-        let id = wide(SPCAT_VOICES);
-        category.SetId(PCWSTR(id.as_ptr()), false).ok()?;
-        let tokens = category.EnumTokens(PCWSTR::null(), PCWSTR::null()).ok()?;
-        loop {
-            let mut token: Option<ISpObjectToken> = None;
-            if tokens.Next(1, &mut token, None).is_err() {
-                return None;
-            }
-            let token = token?;
-            // The token's default string value is the voice description.
-            if let Ok(description) = token.GetStringValue(PCWSTR::null()) {
-                let text = description.to_string().unwrap_or_default();
-                CoTaskMemFree(Some(description.as_ptr() as *const _));
-                if text.eq_ignore_ascii_case(name) {
-                    return Some(token);
-                }
-            }
-        }
-    }
+    enumerate_voice_tokens()
+        .ok()?
+        .into_iter()
+        .find(|token| voice_token_description(token).eq_ignore_ascii_case(name))
 }
 
 #[cfg(test)]
@@ -316,7 +331,7 @@ mod tests {
 
     #[test]
     fn voice_enumeration_finds_installed_voices() {
-        let voices = voice_names();
+        let voices = voice_names().expect("SAPI voice enumeration");
         assert!(
             !voices.is_empty(),
             "expected at least one installed SAPI voice"
