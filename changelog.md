@@ -14,6 +14,8 @@
 
 ### Changes
 
+- Removed the agent policy prohibiting UI mnemonics.
+
 ## 0.1.9
 
 ### Additions
