@@ -16,15 +16,13 @@ This file defines standard procedures every AI agent must follow when working on
 
 Do not make edits, additions, or modifications to the README unless instructed to do so. Instead, place proposed changes into a file called proposed_doc.md which does not get checked into the repo. If you've written to this document before in the same session, append to it, otherwise, overwrite its contents.
 
-## No new mnemonics in the UI
+## No mnemonics in the UI
 
-Do not add an `&` mnemonic to a new or existing control, and do not reintroduce one when editing a label, unless the user explicitly asks for it in that change set.
+Pubsplash's interface has **no `&` mnemonics**, anywhere — not on buttons, checkboxes, radio boxes, menu items, menu bar entries, notebook tab labels, or any dialog. Do not add one to a new or existing control, and do not reintroduce one when editing a label, unless the user explicitly asks for it in that change set.
 
-- Every control must be reachable and operable from the keyboard by Tab/arrow navigation; that is what accessibility requires here, not an ALT chord.
+- Every control must still be reachable and operable from the keyboard by Tab/arrow navigation; that is what accessibility requires here, not an ALT chord.
 - Deliberate keyboard shortcuts belong in the user keybind system (`keybind.rs` / `ui/keybinds.rs`) or as a menu accelerator after the `\t` in a menu item's label (e.g. `"Preferences...\tCtrl+,"`), never as a mnemonic.
-- A **literal** ampersand in a label still has to be doubled (`"Logging && debugging"`), because wx parses labels for mnemonics regardless. That is an escape, not a mnemonic.
-- **23 labels do carry a mnemonic today**, on the Buses and Scenes tabs, the mixer strip's context menu, the Media Player source dialog, the Setup streaming services dialog, and the Speech tab's Validate button. They predate this rule and are left alone. Do not add to them, and do not strip them out as a drive-by either — removing one changes a shortcut somebody may be using, so it wants its own change set and the user's say-so.
-- A mnemonic that survives into a translation **must stay unique within its own dialog**. Translating moves the letter: "Folder"/"Calibrate" are F and C in English but both C in Spanish. Check the whole dialog, not just the label you changed.
+- A **literal** ampersand in a label still has to be doubled (`"Logging && debugging"`), because wx parses labels for mnemonics regardless. That is an escape, not a mnemonic, and is the only `&` allowed in a label.
 
 ## Translations
 
@@ -60,5 +58,5 @@ Other notes:
 ## Other conventions
 
 - The app version shown in the About dialog comes from `Cargo.toml`; bump it as part of cutting a release.
-- Configuration schema changes must remain backward compatible or handled by the corruption/defaults recovery path in `src/config.rs`. New settings need README documentation — which, per **Documentation** above, means proposing the wording in `proposed_doc.md` rather than editing the README yourself.
+- Configuration schema changes must remain backward compatible or handled by the corruption/defaults recovery path in `src/config.rs`; document new settings in the README.
 - A new control needs a context-help message: `cargo run --bin gen-help` adds it to `help.toml` with a blank `message` for you to fill in. A blank one falls back to "No help available for this control." at runtime, so leaving it empty is a visible gap, not a neutral default.

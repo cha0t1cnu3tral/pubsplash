@@ -4,6 +4,12 @@
 
 ### Additions
 
+- Added interface localization with embedded message catalogs and Spanish translations.
+
+- Added an interface-language setting that can follow supported Windows display languages.
+
+- Added the `gen-po` catalog generation and validation tool.
+
 ### Fixes
 
 ### Changes
@@ -13,12 +19,6 @@
 ### Additions
 
 - Added a Discord community link to the README.
-
-- **The interface can now be translated, and ships in Spanish.** Every label, dialog, list row, spoken announcement and F1 help message goes through a message catalog, so Pubsplash speaks and writes the language you read. Anything not yet translated falls back to its English original rather than going blank, which means a partially translated language is still a working interface.
-
-- **Interface language** is chosen on the General tab in Preferences. The default, **Follow Windows**, uses the language Windows itself is displayed in — not your regional format setting, which Windows lets you set separately and which says how dates and numbers are written rather than what language you read. If you list several display languages, Pubsplash takes the first one it has an interface for, so a French-then-Spanish machine comes up in Spanish rather than English. Every other row names a language in that language, so somebody who has landed in an interface they cannot read can still find their own. The choice takes effect the next time Pubsplash starts, and Pubsplash says so when you make one. It does not change the voice a text-to-speech source reads chat in, nor your screen reader's own language.
-
-- Catalogs are embedded in the executable, so nothing has to be installed or shipped beside it and a portable copy behaves exactly like an installed one. Adding a language is a `.po` file under `po/`, a row in `i18n::LANGUAGES` and a line in `i18n::CATALOGS`; `cargo run --bin gen-po` rescans the source and `help.toml` and refreshes every catalog without disturbing the translations already written.
 
 ### Fixes
 
