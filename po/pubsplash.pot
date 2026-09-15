@@ -25,13 +25,13 @@ msgstr ""
 "Language: en\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: src/ui/mod.rs:2206
+#: src/ui/mod.rs:2216
 msgid ""
 "\n\n"
 "Details: {detail}"
 msgstr ""
 
-#: src/ui/mod.rs:2204
+#: src/ui/mod.rs:2214
 msgid ""
 "\n\n"
 "The stream itself is unaffected and is still live."
@@ -119,7 +119,7 @@ msgid ""
 "scheduling another."
 msgstr ""
 
-#: src/ui/mod.rs:2432
+#: src/ui/mod.rs:2442
 msgid "A stream is scheduled to go live later. Exit and discard it?"
 msgstr ""
 
@@ -127,7 +127,7 @@ msgstr ""
 msgid "AM or PM"
 msgstr ""
 
-#: src/ui/mod.rs:2308
+#: src/ui/mod.rs:2318
 msgid "API"
 msgstr ""
 
@@ -152,8 +152,8 @@ msgstr ""
 msgid "AWS secret access key"
 msgstr ""
 
-#: src/ui/mod.rs:2702
-#: src/ui/mod.rs:2769
+#: src/ui/mod.rs:2712
+#: src/ui/mod.rs:2779
 msgid "About Pubsplash"
 msgstr ""
 
@@ -199,7 +199,7 @@ msgstr ""
 msgid "Add bus"
 msgstr ""
 
-#: src/ui/source_dialog.rs:234
+#: src/ui/source_dialog.rs:235
 msgid "Add effect"
 msgstr ""
 
@@ -272,7 +272,7 @@ msgstr ""
 msgid "Application"
 msgstr ""
 
-#: src/ui/mod.rs:2677
+#: src/ui/mod.rs:2687
 msgid "Application preferences"
 msgstr ""
 
@@ -318,6 +318,10 @@ msgstr ""
 
 #: src/ui/preferences.rs:44
 msgid "Archiving"
+msgstr ""
+
+#: src/ui/compressor_dialog.rs:89
+msgid "Attack"
 msgstr ""
 
 #: src/ui/preferences.rs:41
@@ -369,6 +373,7 @@ msgid "Authorize with Mastodon"
 msgstr ""
 
 #: src/ui/ducker_dialog.rs:35
+#: src/ui/source_dialog.rs:400
 msgid "Auto-ducker"
 msgstr ""
 
@@ -440,7 +445,7 @@ msgstr ""
 
 #: src/ui/buses.rs:34
 #: src/ui/buses.rs:36
-#: src/ui/mod.rs:2305
+#: src/ui/mod.rs:2315
 #: src/ui/sends.rs:322
 msgid "Buses"
 msgstr ""
@@ -460,6 +465,7 @@ msgstr ""
 #: src/bin/soundpack_manager.rs:483
 #: src/ui/buses.rs:742
 #: src/ui/buses.rs:945
+#: src/ui/compressor_dialog.rs:133
 #: src/ui/connect_dialog.rs:679
 #: src/ui/ducker_dialog.rs:184
 #: src/ui/keybinds_ui.rs:288
@@ -480,7 +486,7 @@ msgstr ""
 msgid "Cancel scan"
 msgstr ""
 
-#: src/ui/mod.rs:1870
+#: src/ui/mod.rs:1880
 msgid "Cancel scheduled stream"
 msgstr ""
 
@@ -529,8 +535,8 @@ msgstr ""
 
 #: src/ui/chat.rs:155
 #: src/ui/chat.rs:172
-#: src/ui/mod.rs:2303
-#: src/ui/mod.rs:3261
+#: src/ui/mod.rs:2313
+#: src/ui/mod.rs:3271
 msgid "Chat"
 msgstr ""
 
@@ -638,25 +644,34 @@ msgstr ""
 msgid "Compress logs..."
 msgstr ""
 
+#: src/ui/compressor_dialog.rs:82
+msgid "Compression ratio"
+msgstr ""
+
+#: src/ui/compressor_dialog.rs:15
+#: src/ui/source_dialog.rs:401
+msgid "Compressor"
+msgstr ""
+
 #: src/ui/connect_dialog.rs:151
 #: src/ui/connect_dialog.rs:615
 msgid "Connect"
 msgstr ""
 
-#: src/ui/mod.rs:2081
+#: src/ui/mod.rs:2091
 #: src/ui/schedule_ui.rs:88
 msgid "Connect to a streaming service first (File > Setup streaming services)."
 msgstr ""
 
-#: src/ui/mod.rs:3051
+#: src/ui/mod.rs:3061
 msgid "Connected"
 msgstr ""
 
-#: src/ui/mod.rs:3052
+#: src/ui/mod.rs:3062
 msgid "Connected to {display_name}."
 msgstr ""
 
-#: src/ui/mod.rs:438
+#: src/ui/mod.rs:439
 msgid "Connected, waiting for the server"
 msgstr ""
 
@@ -668,12 +683,12 @@ msgstr ""
 msgid "Connecting to GitHub..."
 msgstr ""
 
-#: src/ui/mod.rs:437
+#: src/ui/mod.rs:438
 msgid "Connecting to the stream"
 msgstr ""
 
-#: src/ui/mod.rs:3063
-#: src/ui/mod.rs:3071
+#: src/ui/mod.rs:3073
+#: src/ui/mod.rs:3081
 msgid "Connection failed"
 msgstr ""
 
@@ -683,12 +698,12 @@ msgid ""
 "approve Pubsplash."
 msgstr ""
 
-#: src/ui/mod.rs:3060
+#: src/ui/mod.rs:3070
 msgid "Could not connect: {message}"
 msgstr ""
 
 #: src/ui/logging_ui.rs:112
-#: src/ui/mod.rs:2838
+#: src/ui/mod.rs:2848
 #: src/ui/update.rs:425
 msgid "Could not create {path}: {e}"
 msgstr ""
@@ -701,15 +716,15 @@ msgid ""
 msgstr ""
 
 #: src/ui/logging_ui.rs:120
-#: src/ui/mod.rs:2840
+#: src/ui/mod.rs:2850
 msgid "Could not open {path}: {e}"
 msgstr ""
 
-#: src/ui/mod.rs:2828
+#: src/ui/mod.rs:2838
 msgid "Could not open {url}: {e}"
 msgstr ""
 
-#: src/ui/mod.rs:2748
+#: src/ui/mod.rs:2758
 msgid "Could not open {url}: {message}"
 msgstr ""
 
@@ -721,7 +736,7 @@ msgstr ""
 msgid "Could not start the updater ({path}): {e}. Nothing has been changed."
 msgstr ""
 
-#: src/ui/mod.rs:2809
+#: src/ui/mod.rs:2819
 msgid "Could not start {path}: {e}"
 msgstr ""
 
@@ -729,7 +744,7 @@ msgstr ""
 msgid "Could not work out where Pubsplash is installed, so nothing was changed."
 msgstr ""
 
-#: src/ui/mod.rs:2686
+#: src/ui/mod.rs:2696
 msgid "Create and compile Pubsplash sound packs"
 msgstr ""
 
@@ -813,15 +828,15 @@ msgid ""
 "F10 for recording?"
 msgstr ""
 
-#: src/ui/mod.rs:3098
+#: src/ui/mod.rs:3108
 msgid "Disconnected"
 msgstr ""
 
-#: src/ui/mod.rs:3100
+#: src/ui/mod.rs:3110
 msgid "Disconnected from {name}."
 msgstr ""
 
-#: src/ui/mod.rs:3101
+#: src/ui/mod.rs:3111
 msgid "Disconnected."
 msgstr ""
 
@@ -954,7 +969,7 @@ msgstr ""
 msgid "Enter"
 msgstr ""
 
-#: src/ui/mod.rs:1979
+#: src/ui/mod.rs:1989
 msgid "Enter a full Audiopub URL starting with https://"
 msgstr ""
 
@@ -963,19 +978,19 @@ msgstr ""
 msgid "Enter a nickname."
 msgstr ""
 
-#: src/ui/mod.rs:2046
+#: src/ui/mod.rs:2056
 msgid "Enter a valid Icecast port."
 msgstr ""
 
-#: src/ui/mod.rs:2049
+#: src/ui/mod.rs:2059
 msgid "Enter the Icecast mount point."
 msgstr ""
 
-#: src/ui/mod.rs:2052
+#: src/ui/mod.rs:2062
 msgid "Enter the Icecast password."
 msgstr ""
 
-#: src/ui/mod.rs:2027
+#: src/ui/mod.rs:2037
 msgid "Enter your email and password first."
 msgstr ""
 
@@ -993,13 +1008,13 @@ msgid ""
 "sources, text-to-speech, and sound cues. It is not what listeners hear."
 msgstr ""
 
-#: src/ui/mod.rs:2680
+#: src/ui/mod.rs:2690
 msgid "Exit\tAlt+F4"
 msgstr ""
 
-#: src/ui/mod.rs:2413
-#: src/ui/mod.rs:2433
-#: src/ui/mod.rs:2680
+#: src/ui/mod.rs:2423
+#: src/ui/mod.rs:2443
+#: src/ui/mod.rs:2690
 msgid "Exit Pubsplash"
 msgstr ""
 
@@ -1035,7 +1050,7 @@ msgstr ""
 msgid "February"
 msgstr ""
 
-#: src/ui/mod.rs:2715
+#: src/ui/mod.rs:2725
 msgid "File"
 msgstr ""
 
@@ -1068,22 +1083,22 @@ msgstr ""
 msgid "Global"
 msgstr ""
 
-#: src/ui/mod.rs:2672
+#: src/ui/mod.rs:2682
 msgid "Go live automatically at a set time"
 msgstr ""
 
-#: src/ui/mod.rs:2717
+#: src/ui/mod.rs:2727
 msgid "Go to"
 msgstr ""
 
-#: src/ui/mod.rs:2697
-#: src/ui/mod.rs:2763
+#: src/ui/mod.rs:2707
+#: src/ui/mod.rs:2773
 msgid "Go to Pubsplash data directory"
 msgstr ""
 
-#: src/ui/mod.rs:2692
-#: src/ui/mod.rs:2747
+#: src/ui/mod.rs:2702
 #: src/ui/mod.rs:2757
+#: src/ui/mod.rs:2767
 msgid "Go to stream page"
 msgstr ""
 
@@ -1117,12 +1132,12 @@ msgstr ""
 
 #: src/ui/mastodon_templates.rs:83
 #: src/ui/mastodon_templates.rs:213
-#: src/ui/mod.rs:2718
+#: src/ui/mod.rs:2728
 msgid "Help"
 msgstr ""
 
 #: src/keybind.rs:128
-#: src/ui/mod.rs:2302
+#: src/ui/mod.rs:2312
 msgid "Home"
 msgstr ""
 
@@ -1340,7 +1355,7 @@ msgstr ""
 msgid "Make periodic still-streaming Mastodon posts"
 msgstr ""
 
-#: src/ui/mod.rs:2662
+#: src/ui/mod.rs:2672
 msgid "Manage Audiopub and Icecast streaming services"
 msgstr ""
 
@@ -1371,7 +1386,7 @@ msgstr ""
 msgid "Message from {user}"
 msgstr ""
 
-#: src/ui/mod.rs:3261
+#: src/ui/mod.rs:3271
 msgid "Message not sent: {message}"
 msgstr ""
 
@@ -1643,7 +1658,7 @@ msgstr ""
 msgid "None of the chain's plugins are available, so it cannot be applied."
 msgstr ""
 
-#: src/ui/mod.rs:2080
+#: src/ui/mod.rs:2090
 msgid "Not connected"
 msgstr ""
 
@@ -1689,6 +1704,7 @@ msgstr ""
 
 #: src/bin/soundpack_manager.rs:479
 #: src/ui/buses.rs:968
+#: src/ui/compressor_dialog.rs:130
 #: src/ui/connect_dialog.rs:676
 #: src/ui/ducker_dialog.rs:180
 #: src/ui/keybinds_ui.rs:284
@@ -1713,8 +1729,8 @@ msgstr ""
 msgid "Open &interface"
 msgstr ""
 
-#: src/ui/mod.rs:2705
-#: src/ui/mod.rs:2778
+#: src/ui/mod.rs:2715
+#: src/ui/mod.rs:2788
 msgid "Open Readme"
 msgstr ""
 
@@ -1738,19 +1754,19 @@ msgstr ""
 msgid "Open or create a sound pack project first."
 msgstr ""
 
-#: src/ui/mod.rs:2693
+#: src/ui/mod.rs:2703
 msgid "Open the current stream's page in your browser"
 msgstr ""
 
-#: src/ui/mod.rs:2706
+#: src/ui/mod.rs:2716
 msgid "Open the documentation in your browser"
 msgstr ""
 
-#: src/ui/mod.rs:2698
+#: src/ui/mod.rs:2708
 msgid "Open the folder holding settings, logs, and crash dumps"
 msgstr ""
 
-#: src/ui/mod.rs:2711
+#: src/ui/mod.rs:2721
 msgid "Open the list of changes in your browser"
 msgstr ""
 
@@ -1781,6 +1797,10 @@ msgstr ""
 #: src/ui/audio_prefs.rs:34
 #: src/ui/audio_prefs.rs:163
 msgid "Output device"
+msgstr ""
+
+#: src/ui/compressor_dialog.rs:99
+msgid "Output gain"
 msgstr ""
 
 #: src/ui/scenes.rs:1711
@@ -1887,7 +1907,7 @@ msgstr ""
 msgid "Plugin parameters"
 msgstr ""
 
-#: src/ui/mod.rs:2393
+#: src/ui/mod.rs:2403
 msgid "Plugins skipped"
 msgstr ""
 
@@ -1937,7 +1957,7 @@ msgstr ""
 msgid "Preferences"
 msgstr ""
 
-#: src/ui/mod.rs:2676
+#: src/ui/mod.rs:2686
 msgid "Preferences...\tCtrl+,"
 msgstr ""
 
@@ -1982,7 +2002,7 @@ msgstr ""
 msgid "Provider default"
 msgstr ""
 
-#: src/ui/mod.rs:2292
+#: src/ui/mod.rs:2302
 msgid "Pubsplash"
 msgstr ""
 
@@ -1998,12 +2018,12 @@ msgstr ""
 msgid "Pubsplash Sound Pack Manager"
 msgstr ""
 
-#: src/ui/mod.rs:2798
+#: src/ui/mod.rs:2808
 #: src/ui/update.rs:415
 msgid "Pubsplash could not find its own program file: {e}"
 msgstr ""
 
-#: src/ui/mod.rs:957
+#: src/ui/mod.rs:958
 msgid ""
 "Pubsplash does not have a page address for this stream. Check the site "
 "address of the service you are streaming to."
@@ -2023,7 +2043,7 @@ msgstr ""
 msgid "Pubsplash is no longer connected to a streaming service"
 msgstr ""
 
-#: src/ui/mod.rs:2192
+#: src/ui/mod.rs:2202
 msgid ""
 "Pubsplash is not allowed to write to {folder}.\n\n"
 "Choose a different folder under Recording folder in Preferences."
@@ -2052,7 +2072,7 @@ msgid ""
 "start again."
 msgstr ""
 
-#: src/ui/mod.rs:2770
+#: src/ui/mod.rs:2780
 msgid ""
 "Pubsplash {version}\n\n"
 "An accessibility-first streaming app for Audio Pub."
@@ -2103,7 +2123,7 @@ msgid "Record this stream"
 msgstr ""
 
 #: src/ui/home.rs:366
-#: src/ui/mod.rs:3417
+#: src/ui/mod.rs:3427
 #: src/ui/preferences.rs:268
 msgid "Recording"
 msgstr ""
@@ -2113,11 +2133,11 @@ msgstr ""
 msgid "Recording folder"
 msgstr ""
 
-#: src/ui/mod.rs:1938
+#: src/ui/mod.rs:1948
 msgid "Recording started"
 msgstr ""
 
-#: src/ui/mod.rs:1940
+#: src/ui/mod.rs:1950
 msgid "Recording stopped"
 msgstr ""
 
@@ -2129,6 +2149,10 @@ msgstr ""
 #: src/ui/api.rs:89
 #: src/ui/api.rs:152
 msgid "Refresh balances"
+msgstr ""
+
+#: src/ui/compressor_dialog.rs:91
+msgid "Release"
 msgstr ""
 
 #: src/ui/mastodon_prefs.rs:170
@@ -2167,7 +2191,7 @@ msgstr ""
 msgid "Remove source"
 msgstr ""
 
-#: src/ui/mod.rs:2008
+#: src/ui/mod.rs:2018
 msgid "Remove the '#' and everything after it from the URL."
 msgstr ""
 
@@ -2181,7 +2205,7 @@ msgstr ""
 msgid "Remove the sound pack {name}?"
 msgstr ""
 
-#: src/ui/mod.rs:2003
+#: src/ui/mod.rs:2013
 msgid ""
 "Remove the user name and password from the URL; enter them in the "
 "fields below."
@@ -2267,15 +2291,15 @@ msgid_plural "Saved {n} sounds to the project."
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/ui/mod.rs:3511
+#: src/ui/mod.rs:3521
 msgid "Scan cancelled"
 msgstr ""
 
-#: src/ui/mod.rs:3501
+#: src/ui/mod.rs:3511
 msgid "Scan complete"
 msgstr ""
 
-#: src/ui/mod.rs:3487
+#: src/ui/mod.rs:3497
 msgid "Scan complete. {found} new plugins found ({total_known} known in total)."
 msgstr ""
 
@@ -2322,7 +2346,7 @@ msgstr ""
 msgid "Scenes"
 msgstr ""
 
-#: src/ui/mod.rs:2304
+#: src/ui/mod.rs:2314
 msgid "Scenes and Sources"
 msgstr ""
 
@@ -2330,7 +2354,7 @@ msgstr ""
 msgid "Schedule stream"
 msgstr ""
 
-#: src/ui/mod.rs:2671
+#: src/ui/mod.rs:2681
 msgid "Schedule stream..."
 msgstr ""
 
@@ -2411,7 +2435,7 @@ msgstr ""
 msgid "Set stream info"
 msgstr ""
 
-#: src/ui/mod.rs:2666
+#: src/ui/mod.rs:2676
 msgid "Set stream info..."
 msgstr ""
 
@@ -2443,11 +2467,11 @@ msgstr ""
 msgid "Setup streaming services"
 msgstr ""
 
-#: src/ui/mod.rs:2661
+#: src/ui/mod.rs:2671
 msgid "Setup streaming services..."
 msgstr ""
 
-#: src/ui/mod.rs:2882
+#: src/ui/mod.rs:2892
 msgid "ShellExecute failed with code {code}"
 msgstr ""
 
@@ -2501,7 +2525,7 @@ msgstr ""
 msgid "Slash"
 msgstr ""
 
-#: src/ui/mod.rs:2375
+#: src/ui/mod.rs:2385
 msgid ""
 "Some plugins used by your buses are not installed on this machine and "
 "will be skipped until you install them and rescan:\n"
@@ -2520,11 +2544,11 @@ msgstr ""
 
 #: src/bin/soundpack_manager.rs:688
 #: src/bin/soundpack_manager.rs:695
-#: src/ui/mod.rs:2738
+#: src/ui/mod.rs:2748
 msgid "Sound Pack Manager"
 msgstr ""
 
-#: src/ui/mod.rs:2685
+#: src/ui/mod.rs:2695
 msgid "Sound Pack Manager..."
 msgstr ""
 
@@ -2612,6 +2636,10 @@ msgstr ""
 msgid "Star server URL"
 msgstr ""
 
+#: src/ui/compressor_dialog.rs:74
+msgid "Start compressing at"
+msgstr ""
+
 #: src/ui/ducker_dialog.rs:138
 msgid "Start ducking at"
 msgstr ""
@@ -2635,12 +2663,12 @@ msgid "Start or stop streaming"
 msgstr ""
 
 #: src/ui/home.rs:82
-#: src/ui/mod.rs:1887
+#: src/ui/mod.rs:1897
 msgid "Start recording"
 msgstr ""
 
 #: src/ui/home.rs:73
-#: src/ui/mod.rs:1871
+#: src/ui/mod.rs:1881
 msgid "Start streaming"
 msgstr ""
 
@@ -2677,11 +2705,11 @@ msgstr ""
 msgid "Stop Media"
 msgstr ""
 
-#: src/ui/mod.rs:1885
+#: src/ui/mod.rs:1895
 msgid "Stop recording"
 msgstr ""
 
-#: src/ui/mod.rs:1872
+#: src/ui/mod.rs:1882
 msgid "Stop streaming"
 msgstr ""
 
@@ -2693,11 +2721,11 @@ msgstr ""
 msgid "Stopping"
 msgstr ""
 
-#: src/ui/mod.rs:440
+#: src/ui/mod.rs:441
 msgid "Stopping the stream"
 msgstr ""
 
-#: src/ui/mod.rs:238
+#: src/ui/mod.rs:239
 #: src/ui/stream_info_dialog.rs:199
 msgid "Stream"
 msgstr ""
@@ -2733,7 +2761,7 @@ msgstr ""
 msgid "Streaming"
 msgstr ""
 
-#: src/ui/mod.rs:3161
+#: src/ui/mod.rs:3171
 msgid "Streaming problem"
 msgstr ""
 
@@ -2742,11 +2770,11 @@ msgstr ""
 msgid "Streaming services"
 msgstr ""
 
-#: src/ui/mod.rs:439
+#: src/ui/mod.rs:440
 msgid "Streaming started"
 msgstr ""
 
-#: src/ui/mod.rs:449
+#: src/ui/mod.rs:450
 msgid "Streaming stopped"
 msgstr ""
 
@@ -2836,7 +2864,7 @@ msgstr ""
 msgid "Text-to-Speech: {engine}, {voice}"
 msgstr ""
 
-#: src/ui/mod.rs:1998
+#: src/ui/mod.rs:2008
 msgid ""
 "That URL has no site name in it. It should look like "
 "https://audiopub.site"
@@ -2865,13 +2893,13 @@ msgstr ""
 msgid "That strip is not in the mixer right now"
 msgstr ""
 
-#: src/ui/mod.rs:2197
+#: src/ui/mod.rs:2207
 msgid ""
 "The MP3 encoder for the recording could not be created, so nothing "
 "could be written."
 msgstr ""
 
-#: src/ui/mod.rs:2801
+#: src/ui/mod.rs:2811
 msgid ""
 "The Sound Pack Manager ({path}) is missing. Reinstall Pubsplash to "
 "restore it."
@@ -2887,7 +2915,7 @@ msgstr ""
 msgid "The engine returned no audio."
 msgstr ""
 
-#: src/ui/mod.rs:2189
+#: src/ui/mod.rs:2199
 msgid ""
 "The folder {folder} does not exist.\n\n"
 "Choose a folder that does exist under Recording folder in Preferences, "
@@ -2912,20 +2940,20 @@ msgstr ""
 msgid "The parent folder does not exist."
 msgstr ""
 
-#: src/ui/mod.rs:2202
+#: src/ui/mod.rs:2212
 msgid ""
 "The recording did not start.\n\n"
 "{cause}"
 msgstr ""
 
-#: src/ui/mod.rs:2194
+#: src/ui/mod.rs:2204
 msgid ""
 "The recording file could not be created in {folder}.\n\n"
 "Check that the folder exists and can be written to, or choose another "
 "one under Recording folder in Preferences."
 msgstr ""
 
-#: src/ui/mod.rs:3512
+#: src/ui/mod.rs:3522
 msgid "The scan was cancelled. Nothing was saved."
 msgstr ""
 
@@ -2933,11 +2961,11 @@ msgstr ""
 msgid "The sound pack could not be loaded."
 msgstr ""
 
-#: src/ui/mod.rs:951
+#: src/ui/mod.rs:952
 msgid "The stream is shutting down."
 msgstr ""
 
-#: src/ui/mod.rs:949
+#: src/ui/mod.rs:950
 msgid "The stream is still connecting, so its page is not available yet."
 msgstr ""
 
@@ -2957,7 +2985,7 @@ msgstr ""
 msgid "There is no bus called {name}"
 msgstr ""
 
-#: src/ui/mod.rs:2386
+#: src/ui/mod.rs:2396
 msgid ""
 "These plugins are installed but could not be loaded, so they will be "
 "skipped:\n"
@@ -2979,11 +3007,11 @@ msgstr ""
 msgid "This engine needs no settings."
 msgstr ""
 
-#: src/ui/mod.rs:955
+#: src/ui/mod.rs:956
 msgid "This is a direct Icecast stream, which has no Audio Pub page."
 msgstr ""
 
-#: src/ui/mod.rs:239
+#: src/ui/mod.rs:240
 msgid "This is just a stream"
 msgstr ""
 
@@ -3028,11 +3056,11 @@ msgstr ""
 msgid "Title"
 msgstr ""
 
-#: src/ui/mod.rs:2667
+#: src/ui/mod.rs:2677
 msgid "Title, description, and archiving for the stream"
 msgstr ""
 
-#: src/ui/mod.rs:2716
+#: src/ui/mod.rs:2726
 msgid "Tools"
 msgstr ""
 
@@ -3103,12 +3131,12 @@ msgstr ""
 msgid "Value entry"
 msgstr ""
 
-#: src/ui/mod.rs:2702
+#: src/ui/mod.rs:2712
 msgid "Version information"
 msgstr ""
 
-#: src/ui/mod.rs:2710
-#: src/ui/mod.rs:2783
+#: src/ui/mod.rs:2720
+#: src/ui/mod.rs:2793
 msgid "View Changelog"
 msgstr ""
 
@@ -3173,8 +3201,8 @@ msgstr ""
 msgid "Wednesday"
 msgstr ""
 
-#: src/ui/source_dialog.rs:233
-#: src/ui/source_dialog.rs:238
+#: src/ui/source_dialog.rs:234
+#: src/ui/source_dialog.rs:239
 msgid "What kind of effect?"
 msgstr ""
 
@@ -3188,11 +3216,11 @@ msgstr ""
 msgid "Which application should this source capture?"
 msgstr ""
 
-#: src/ui/mod.rs:2412
+#: src/ui/mod.rs:2422
 msgid "You are currently streaming. Stop the stream and exit?"
 msgstr ""
 
-#: src/ui/mod.rs:946
+#: src/ui/mod.rs:947
 msgid "You are not streaming. Start a stream, and this will open its page."
 msgstr ""
 
@@ -3405,7 +3433,21 @@ msgstr ""
 msgid "{n} voices available for {name}."
 msgstr ""
 
-#: src/ui/mod.rs:1991
+#: src/ui/source_dialog.rs:435
+msgid "{position}. Auto-ducker, listening to nothing"
+msgstr ""
+
+#: src/ui/source_dialog.rs:426
+msgid "{position}. Auto-ducker, listening to {source}, ducks to {volume}%"
+msgstr ""
+
+#: src/ui/source_dialog.rs:441
+msgid ""
+"{position}. Compressor, threshold {threshold}%, ratio {ratio}:1, output "
+"gain {gain}%"
+msgstr ""
+
+#: src/ui/mod.rs:2001
 msgid "{scheme} is not a web address scheme. The URL should start with https://"
 msgstr ""
 
@@ -3426,17 +3468,26 @@ msgstr ""
 msgid "{source} ({scene})"
 msgstr ""
 
-#: src/ui/mod.rs:1982
+#: src/ui/mod.rs:1992
 msgid "{url} is not a valid URL. It should look like https://audiopub.site"
 msgstr ""
 
 #: src/ui/chat.rs:206
-#: src/ui/mod.rs:1272
+#: src/ui/mod.rs:1282
 msgid "{user}: {content}"
 msgstr ""
 
+#: src/ui/compressor_dialog.rs:172
 #: src/ui/ducker_dialog.rs:244
 msgid "{value} ms"
+msgstr ""
+
+#: src/ui/compressor_dialog.rs:171
+msgid "{value} to 1"
+msgstr ""
+
+#: src/ui/compressor_dialog.rs:170
+msgid "{value}%"
 msgstr ""
 
 #: src/ui/ducker_dialog.rs:243
@@ -3492,6 +3543,55 @@ msgctxt "dialog.chatView.text"
 msgid ""
 "Arrow up and down through this list to view chats. Home jumps to the "
 "oldest message while END jumps to the most recent one."
+msgstr ""
+
+#. Context help for the Compressor attack slider.
+#: help.toml
+msgctxt "dialog.compressor.attack"
+msgid ""
+"How quickly the compressor turns loud audio down. A short attack "
+"catches sudden peaks; a longer attack keeps the beginning of words "
+"sounding more natural. 10 milliseconds is a good starting point for "
+"speech."
+msgstr ""
+
+#. Context help for the Compressor output gain slider.
+#: help.toml
+msgctxt "dialog.compressor.outputGain"
+msgid ""
+"Raises or lowers the signal after it has been compressed. 100% leaves "
+"the compressed level unchanged. Raise this when compression has made "
+"the source too quiet, but listen for distortion because this is gain, "
+"not a limiter."
+msgstr ""
+
+#. Context help for the Compressor ratio slider.
+#: help.toml
+msgctxt "dialog.compressor.ratio"
+msgid ""
+"How strongly audio above the threshold is reduced. At 4 to 1, every "
+"four decibels above the threshold come out as one. 1 to 1 does no "
+"compression; higher values make loud and quiet passages more even."
+msgstr ""
+
+#. Context help for the Compressor release slider.
+#: help.toml
+msgctxt "dialog.compressor.release"
+msgid ""
+"How quickly the source returns to its normal level after it gets "
+"quieter. Too short can sound rough or make room noise swell between "
+"words; too long can leave the next phrase quiet. 150 milliseconds is a "
+"good starting point for speech."
+msgstr ""
+
+#. Context help for the Compressor threshold slider.
+#: help.toml
+msgctxt "dialog.compressor.threshold"
+msgid ""
+"The input level where compression begins, as a percentage of full "
+"signal. Audio below it is left alone and audio above it is reduced. "
+"Lower this if the compressor rarely responds; raise it if normal speech "
+"sounds too restrained."
 msgstr ""
 
 #. Context help for the New service type selector.

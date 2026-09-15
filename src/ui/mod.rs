@@ -9,6 +9,7 @@ mod buses;
 mod chat;
 mod connect_dialog;
 mod cue_feed;
+mod compressor_dialog;
 mod ducker_dialog;
 mod fx;
 mod fx_editor;
@@ -1098,7 +1099,7 @@ fn effect_specs(
     own_index: usize,
     source_index: impl Fn(&str) -> Option<usize>,
 ) -> Vec<crate::audio::effects::EffectSpec> {
-    use crate::audio::effects::{DuckerSpec, EffectSpec};
+    use crate::audio::effects::{CompressorSpec, DuckerSpec, EffectSpec};
     source
         .effects
         .iter()
@@ -1111,6 +1112,15 @@ fn effect_specs(
                 ducker.fade_up_ms,
                 ducker.hold_ms,
             )),
+            crate::config::EffectConfig::Compressor(compressor) => {
+                EffectSpec::Compressor(CompressorSpec::new(
+                    compressor.threshold,
+                    compressor.ratio,
+                    compressor.attack_ms,
+                    compressor.release_ms,
+                    compressor.output_gain,
+                ))
+            }
         })
         .collect()
 }
@@ -3613,7 +3623,9 @@ mod effect_spec_tests {
     }
 
     fn key_of(spec: EffectSpec) -> Option<usize> {
-        let EffectSpec::Ducker(ducker) = spec;
+        let EffectSpec::Ducker(ducker) = spec else {
+            panic!("expected ducker");
+        };
         ducker.key
     }
 
@@ -3657,7 +3669,9 @@ mod effect_spec_tests {
             ..Default::default()
         })];
         let index = |name: &str| sources.iter().position(|s| s.name == name);
-        let EffectSpec::Ducker(ducker) = effect_specs(&source, 1, index).remove(0);
+        let EffectSpec::Ducker(ducker) = effect_specs(&source, 1, index).remove(0) else {
+            panic!("expected ducker");
+        };
         assert_eq!(ducker.key, Some(0));
         assert!((ducker.duck_to - 0.4).abs() < 1e-6);
         assert!((ducker.trigger - 0.1).abs() < 1e-6);

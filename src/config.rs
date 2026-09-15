@@ -781,13 +781,36 @@ impl Default for SourceConfig {
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum EffectConfig {
     Ducker(DuckerConfig),
+    Compressor(CompressorConfig),
 }
 
-impl EffectConfig {
-    /// What this kind of effect is called, with no reference to its settings.
-    pub fn type_display_name(&self) -> &'static str {
-        match self {
-            EffectConfig::Ducker(_) => "Auto-ducker",
+/// Evens out a source by reducing loud passages above a threshold.
+///
+/// Levels are percentages rather than decibels so the settings use the same
+/// scale as the rest of Pubsplash's mixer. `output_gain` is 100 at unity.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(default)]
+pub struct CompressorConfig {
+    /// Input level above which compression begins, 1..100.
+    pub threshold: u32,
+    /// Compression ratio, 1..20. Four means 4:1.
+    pub ratio: u32,
+    /// How quickly gain reduction responds to louder audio.
+    pub attack_ms: u32,
+    /// How quickly gain returns after the input falls below the threshold.
+    pub release_ms: u32,
+    /// Gain applied after compression, as a percentage (100 = unity).
+    pub output_gain: u32,
+}
+
+impl Default for CompressorConfig {
+    fn default() -> Self {
+        Self {
+            threshold: 20,
+            ratio: 4,
+            attack_ms: 10,
+            release_ms: 150,
+            output_gain: 100,
         }
     }
 }
@@ -1281,6 +1304,9 @@ mod tests {
     fn effects_are_tagged_by_kind() {
         let json = serde_json::to_string(&EffectConfig::Ducker(DuckerConfig::default())).unwrap();
         assert!(json.contains("\"type\":\"ducker\""), "got {json}");
+        let json =
+            serde_json::to_string(&EffectConfig::Compressor(CompressorConfig::default())).unwrap();
+        assert!(json.contains("\"type\":\"compressor\""), "got {json}");
     }
 
     /// A ducker written by an older build that lacked one of these fields must
@@ -1294,6 +1320,17 @@ mod tests {
         assert_eq!(ducker.trigger, 5);
         assert_eq!(ducker.fade_up_ms, 300);
         assert_eq!(ducker.hold_ms, 250);
+    }
+
+    #[test]
+    fn a_partial_compressor_fills_in_defaults() {
+        let compressor: CompressorConfig =
+            serde_json::from_str(r#"{ "threshold": 30 }"#).unwrap();
+        assert_eq!(compressor.threshold, 30);
+        assert_eq!(compressor.ratio, 4);
+        assert_eq!(compressor.attack_ms, 10);
+        assert_eq!(compressor.release_ms, 150);
+        assert_eq!(compressor.output_gain, 100);
     }
 
     use super::*;

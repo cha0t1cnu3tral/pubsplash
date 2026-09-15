@@ -14,8 +14,10 @@
 //! [`ActiveEffect::process`] — plus the config and UI halves in
 //! `config::EffectConfig` and `ui::source_dialog`.
 
+pub mod compressor;
 pub mod ducker;
 
+pub use compressor::{Compressor, CompressorSpec};
 pub use ducker::{Ducker, DuckerSpec};
 
 /// One effect as the engine holds it, carrying whatever state it needs between
@@ -23,6 +25,7 @@ pub use ducker::{Ducker, DuckerSpec};
 #[derive(Debug, Clone, PartialEq)]
 pub enum ActiveEffect {
     Ducker(Ducker),
+    Compressor(Compressor),
 }
 
 /// One effect's settings, as the UI hands them down.
@@ -33,6 +36,7 @@ pub enum ActiveEffect {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum EffectSpec {
     Ducker(DuckerSpec),
+    Compressor(CompressorSpec),
 }
 
 impl EffectSpec {
@@ -42,6 +46,7 @@ impl EffectSpec {
         matches!(
             (self, other),
             (EffectSpec::Ducker(_), ActiveEffect::Ducker(_))
+                | (EffectSpec::Compressor(_), ActiveEffect::Compressor(_))
         )
     }
 }
@@ -50,6 +55,7 @@ impl ActiveEffect {
     pub fn new(spec: EffectSpec) -> Self {
         match spec {
             EffectSpec::Ducker(spec) => ActiveEffect::Ducker(Ducker::new(spec)),
+            EffectSpec::Compressor(spec) => ActiveEffect::Compressor(Compressor::new(spec)),
         }
     }
 
@@ -57,6 +63,10 @@ impl ActiveEffect {
     fn adopt(&mut self, spec: EffectSpec) {
         match (self, spec) {
             (ActiveEffect::Ducker(ducker), EffectSpec::Ducker(spec)) => ducker.adopt(spec),
+            (ActiveEffect::Compressor(compressor), EffectSpec::Compressor(spec)) => {
+                compressor.adopt(spec)
+            }
+            _ => unreachable!("effect kind checked before adopting settings"),
         }
     }
 
@@ -68,6 +78,7 @@ impl ActiveEffect {
     pub fn process(&mut self, block: &mut [f32], levels: &[f32]) {
         match self {
             ActiveEffect::Ducker(ducker) => ducker.process(block, levels),
+            ActiveEffect::Compressor(compressor) => compressor.process(block),
         }
     }
 }
@@ -117,11 +128,15 @@ mod tests {
         for _ in 0..6 {
             effects[0].process(&mut vec![1.0f32; BLOCK_SAMPLES], &[0.5]);
         }
-        let ActiveEffect::Ducker(before) = &effects[0];
+        let ActiveEffect::Ducker(before) = &effects[0] else {
+            panic!("expected ducker");
+        };
         let ducked = before.clone();
 
         let rebuilt = rebuild(effects, &[spec(25)]);
-        let ActiveEffect::Ducker(after) = &rebuilt[0];
+        let ActiveEffect::Ducker(after) = &rebuilt[0] else {
+            panic!("expected ducker");
+        };
         assert_eq!(after, &ducked, "the same running state, not a fresh one");
 
         // And it is still ducking, rather than having snapped back to unity.
@@ -135,7 +150,9 @@ mod tests {
     fn a_rebuild_applies_the_new_settings() {
         let effects = vec![ActiveEffect::new(spec(25))];
         let rebuilt = rebuild(effects, &[spec(40)]);
-        let ActiveEffect::Ducker(ducker) = &rebuilt[0];
+        let ActiveEffect::Ducker(ducker) = &rebuilt[0] else {
+            panic!("expected ducker");
+        };
         assert!((ducker.spec().duck_to - 0.4).abs() < 1e-6);
     }
 

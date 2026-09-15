@@ -4,6 +4,8 @@
 
 ### Additions
 
+- Added a built-in per-source compressor with threshold, ratio, attack, release, and output-gain controls.
+
 - Added interface localization with embedded message catalogs and Spanish translations.
 
 - Added an interface-language setting that can follow supported Windows display languages.

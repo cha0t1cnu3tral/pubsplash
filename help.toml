@@ -43,6 +43,36 @@ file = "src/ui/chat.rs"
 message = "Arrow up and down through this list to view chats. Home jumps to the oldest message while END jumps to the most recent one."
 
 [[control]]
+id = "dialog.compressor.attack"
+label = "Compressor attack slider"
+file = "src/ui/compressor_dialog.rs"
+message = "How quickly the compressor turns loud audio down. A short attack catches sudden peaks; a longer attack keeps the beginning of words sounding more natural. 10 milliseconds is a good starting point for speech."
+
+[[control]]
+id = "dialog.compressor.outputGain"
+label = "Compressor output gain slider"
+file = "src/ui/compressor_dialog.rs"
+message = "Raises or lowers the signal after it has been compressed. 100% leaves the compressed level unchanged. Raise this when compression has made the source too quiet, but listen for distortion because this is gain, not a limiter."
+
+[[control]]
+id = "dialog.compressor.ratio"
+label = "Compressor ratio slider"
+file = "src/ui/compressor_dialog.rs"
+message = "How strongly audio above the threshold is reduced. At 4 to 1, every four decibels above the threshold come out as one. 1 to 1 does no compression; higher values make loud and quiet passages more even."
+
+[[control]]
+id = "dialog.compressor.release"
+label = "Compressor release slider"
+file = "src/ui/compressor_dialog.rs"
+message = "How quickly the source returns to its normal level after it gets quieter. Too short can sound rough or make room noise swell between words; too long can leave the next phrase quiet. 150 milliseconds is a good starting point for speech."
+
+[[control]]
+id = "dialog.compressor.threshold"
+label = "Compressor threshold slider"
+file = "src/ui/compressor_dialog.rs"
+message = "The input level where compression begins, as a percentage of full signal. Audio below it is left alone and audio above it is reduced. Lower this if the compressor rarely responds; raise it if normal speech sounds too restrained."
+
+[[control]]
 id = "dialog.connect.addServiceType"
 label = "New service type selector"
 file = "src/ui/connect_dialog.rs"

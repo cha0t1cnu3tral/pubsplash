@@ -23,7 +23,7 @@
 //! the Desktop Audio page's refusal depends on.
 
 use super::App;
-use crate::config::{DuckerConfig, EffectConfig, SourceConfig};
+use crate::config::{CompressorConfig, DuckerConfig, EffectConfig, SourceConfig};
 use crate::state::{ListEdit, move_down, move_up};
 use crate::t;
 use std::cell::RefCell;
@@ -227,12 +227,13 @@ pub fn add_effects_page(
             // of built-in effects is that the second one is a row in
             // `available` and an arm in `configure`, and nothing else.
             let available = available_effects();
-            let labels: Vec<&str> = available.iter().map(|e| e.type_display_name()).collect();
+            let labels: Vec<String> = available.iter().map(effect_type_name).collect();
+            let label_refs: Vec<&str> = labels.iter().map(String::as_str).collect();
             let picker = SingleChoiceDialog::builder(
                 &dialog,
                 &t!("What kind of effect?"),
                 &t!("Add effect"),
-                &labels,
+                &label_refs,
             )
             .build();
             super::native_acc::install_in_dialog(&picker, &t!("What kind of effect?"));
@@ -388,7 +389,17 @@ fn apply(app: &Rc<App>, scene_index: usize, source_index: usize, effects: &[Effe
 /// Every built-in effect that can be added, in the order the picker offers
 /// them, each carrying its own defaults.
 fn available_effects() -> Vec<EffectConfig> {
-    vec![EffectConfig::Ducker(DuckerConfig::default())]
+    vec![
+        EffectConfig::Ducker(DuckerConfig::default()),
+        EffectConfig::Compressor(CompressorConfig::default()),
+    ]
+}
+
+fn effect_type_name(effect: &EffectConfig) -> String {
+    match effect {
+        EffectConfig::Ducker(_) => t!("Auto-ducker"),
+        EffectConfig::Compressor(_) => t!("Compressor"),
+    }
 }
 
 /// Opens the settings dialog belonging to whichever effect this is.
@@ -396,6 +407,9 @@ fn configure(parent: &Dialog, effect: &EffectConfig, keys: &[KeyChoice]) -> Opti
     match effect {
         EffectConfig::Ducker(config) => {
             super::ducker_dialog::edit(parent, config, keys).map(EffectConfig::Ducker)
+        }
+        EffectConfig::Compressor(config) => {
+            super::compressor_dialog::edit(parent, config).map(EffectConfig::Compressor)
         }
     }
 }
@@ -409,17 +423,28 @@ fn row_label(index: usize, effect: &EffectConfig, keys: &[KeyChoice]) -> String 
                 .find(|k| k.name == config.key)
                 .map(|k| k.label.as_str());
             match listening {
-                Some(label) => format!(
-                    "{}. Auto-ducker, listening to {label}, ducks to {}%",
-                    index + 1,
-                    config.duck_to
+                Some(label) => t!(
+                    "{position}. Auto-ducker, listening to {source}, ducks to {volume}%",
+                    position = index + 1,
+                    source = label,
+                    volume = config.duck_to
                 ),
                 // Covers both "not configured yet" and "the source it listened
                 // to is gone" — in either case it does nothing at all, and
                 // saying so here is the only way the user finds that out.
-                None => format!("{}. Auto-ducker, listening to nothing", index + 1),
+                None => t!(
+                    "{position}. Auto-ducker, listening to nothing",
+                    position = index + 1
+                ),
             }
         }
+        EffectConfig::Compressor(config) => t!(
+            "{position}. Compressor, threshold {threshold}%, ratio {ratio}:1, output gain {gain}%",
+            position = index + 1,
+            threshold = config.threshold,
+            ratio = config.ratio,
+            gain = config.output_gain
+        ),
     }
 }
 
