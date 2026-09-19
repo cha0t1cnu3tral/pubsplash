@@ -1,6 +1,6 @@
-//! Writes the encoded MP3 stream to disk while recording. The engine feeds it
-//! the same bytes it hands to the Icecast sender, so a recording is an exact,
-//! re-encode-free copy of the broadcast.
+//! Writes an encoded stream to disk while recording. The recording has its own
+//! encoder so it can run without a broadcast, but uses the broadcast format
+//! and bitrate when one is active.
 //!
 //! A single stream session normally produces one continuous file. The `split`
 //! machinery (renaming the first file to `..__001.mp3` and continuing into
@@ -35,7 +35,8 @@ pub enum Written {
 /// [`Recorder::write`] is a synchronous `write_all`, and once the 8 KB buffer
 /// fills, that is a real disk write. Doing it inline meant doing it on the mix
 /// thread, where a 200 ms stall on a USB stick or a network drive is a 200 ms
-/// gap in the MP3 going out to Icecast. The mixer now only hands over a buffer.
+/// gap in the encoded stream going out to Icecast. The mixer now only hands
+/// over a buffer.
 pub struct RecorderHandle {
     blocks: Option<crossbeam_channel::Sender<Vec<u8>>>,
     thread: Option<std::thread::JoinHandle<()>>,

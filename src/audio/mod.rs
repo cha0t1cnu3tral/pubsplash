@@ -1,5 +1,5 @@
-//! The audio engine: owns capture threads and the mixer loop, encodes MP3
-//! while streaming, and reacts to UI commands (volumes, mutes, scene
+//! The audio engine: owns capture threads and the mixer loop, encodes the
+//! selected stream format while streaming, and reacts to UI commands (volumes, mutes, scene
 //! switches) without ever blocking the UI thread.
 
 pub mod app_list;
@@ -18,6 +18,7 @@ pub mod render;
 
 use fx_chain::FxChain;
 
+use crate::config::StreamFormat;
 use capture::CaptureKind;
 use crossbeam_channel::{Receiver, Sender};
 use mixer::{BLOCK_SAMPLES, ChannelStrip};
@@ -171,17 +172,18 @@ pub enum EngineCommand {
     /// against whatever `audio::render::output_render_device` now answers. The
     /// gap is one block, and only for a user who is monitoring at the time.
     ReopenMonitor,
-    /// Begin encoding; encoded MP3 chunks flow into the sender (consumed by
-    /// the Icecast task on the network runtime).
+    /// Begin encoding in `format`; elementary-stream chunks flow into the
+    /// sender consumed by the Icecast task on the network runtime.
     StartEncoding {
+        format: StreamFormat,
         bitrate_kbps: u32,
         out: tokio::sync::mpsc::Sender<Vec<u8>>,
     },
     StopEncoding,
-    /// Begin recording the master mix to `path` as MP3, using a dedicated
-    /// encoder independent of streaming. Ignored if a recording is already
-    /// active.
+    /// Begin recording the master mix to `path`, using a dedicated encoder
+    /// independent of streaming. Ignored if a recording is already active.
     StartRecording {
+        format: StreamFormat,
         bitrate_kbps: u32,
         path: std::path::PathBuf,
     },
@@ -533,12 +535,12 @@ fn engine_loop(
     let mut master = ChannelStrip::new(100, false);
     let mut master_monitor = false;
     let mut monitor_out: Option<MonitorOutput> = None;
-    let mut encoder: Option<(encoder::Mp3Encoder, tokio::sync::mpsc::Sender<Vec<u8>>)> = None;
+    let mut encoder: Option<(encoder::StreamEncoder, tokio::sync::mpsc::Sender<Vec<u8>>)> = None;
     // Consecutive blocks dropped because the outgoing stream buffer was full,
     // so the log says so once a second rather than a hundred times.
     let mut dropped_blocks: u64 = 0;
     // Recording runs on its own encoder so it works with or without streaming.
-    let mut rec_encoder: Option<encoder::Mp3Encoder> = None;
+    let mut rec_encoder: Option<encoder::StreamEncoder> = None;
     let mut recorder: Option<recorder::RecorderHandle> = None;
 
     let block_period = Duration::from_millis(10);
@@ -786,20 +788,22 @@ fn engine_loop(
                 // below reopens against the newly chosen device on this same
                 // block if anything is still being monitored.
                 Ok(EngineCommand::ReopenMonitor) => monitor_out = None,
-                Ok(EngineCommand::StartEncoding { bitrate_kbps, out }) => {
-                    match encoder::Mp3Encoder::new(bitrate_kbps) {
-                        Ok(enc) => {
-                            encoder = Some((enc, out));
-                            dropped_blocks = 0;
-                        }
-                        Err(e) => {
-                            log::error!("Failed to create MP3 encoder: {e}");
-                            events.send(EngineEvent::EncodingFailed {
-                                message: e.to_string(),
-                            });
-                        }
+                Ok(EngineCommand::StartEncoding {
+                    format,
+                    bitrate_kbps,
+                    out,
+                }) => match encoder::StreamEncoder::new(format, bitrate_kbps) {
+                    Ok(enc) => {
+                        encoder = Some((enc, out));
+                        dropped_blocks = 0;
                     }
-                }
+                    Err(e) => {
+                        log::error!("Failed to create {} encoder: {e}", format.display_name());
+                        events.send(EngineEvent::EncodingFailed {
+                            message: e.to_string(),
+                        });
+                    }
+                },
                 Ok(EngineCommand::StopEncoding) => {
                     if let Some((enc, out)) = encoder.take()
                         && let Ok(tail) = enc.finish()
@@ -807,7 +811,11 @@ fn engine_loop(
                         let _ = out.try_send(tail);
                     }
                 }
-                Ok(EngineCommand::StartRecording { bitrate_kbps, path }) => {
+                Ok(EngineCommand::StartRecording {
+                    format,
+                    bitrate_kbps,
+                    path,
+                }) => {
                     if recorder.is_none() {
                         // Both halves are built before either is kept, and a
                         // failure keeps neither: half a recording is a file
@@ -815,7 +823,7 @@ fn engine_loop(
                         // the guard above is `recorder.is_none()` — a recording
                         // the user can never start again this session.
                         let (failure, kind) = match (
-                            encoder::Mp3Encoder::new(bitrate_kbps),
+                            encoder::StreamEncoder::new(format, bitrate_kbps),
                             recorder::RecorderHandle::start(&path),
                         ) {
                             (Ok(enc), Ok(rec)) => {
@@ -982,7 +990,7 @@ fn engine_loop(
                 }
                 Ok(_) => {}
                 Err(e) => {
-                    log::error!("MP3 encode error: {e}");
+                    log::error!("Stream encode error: {e}");
                     encoder = None;
                     events.send(EngineEvent::EncodingStopped {
                         reason: Some(e.to_string()),
@@ -1212,7 +1220,7 @@ fn stop_sources(sources: &mut Vec<ActiveSource>, since: Duration) {
 /// Flushes the recording encoder's tail into the file and closes it. Safe to
 /// call when nothing is recording.
 fn finalize_recording(
-    rec_encoder: &mut Option<encoder::Mp3Encoder>,
+    rec_encoder: &mut Option<encoder::StreamEncoder>,
     recorder: &mut Option<recorder::RecorderHandle>,
 ) {
     if let Some(enc) = rec_encoder.take()

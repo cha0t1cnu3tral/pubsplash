@@ -1,16 +1,17 @@
 //! Set stream info dialog: title, description, and whether the stream is
 //! archived on the server. Values live for this session only.
 
-use crate::t;
 use super::App;
+use crate::config::StreamFormat;
+use crate::t;
 use std::rc::Rc;
 use wxdragon::prelude::*;
 
 /// Encoder bitrates offered by the Quality dropdown, in kbps. These are the
-/// discrete steps `audio::encoder::bitrate_from_kbps` maps to. The Audio Pub
-/// server imposes no bitrate limit (it only checks the codec), so the full
-/// range is valid.
+/// discrete steps the stream encoders accept. The Audio Pub server imposes no
+/// bitrate limit (it only checks the codec), so the full range is valid.
 const QUALITY_KBPS: [u32; 8] = [48, 64, 96, 128, 160, 192, 256, 320];
+const STREAM_FORMATS: [StreamFormat; 2] = [StreamFormat::Mp3, StreamFormat::Aac];
 
 /// Shows the dialog pre-filled with the current session's stream info.
 /// Returns true if the user confirmed with OK (info is then stored in
@@ -18,7 +19,7 @@ const QUALITY_KBPS: [u32; 8] = [48, 64, 96, 128, 160, 192, 256, 320];
 pub fn show(app: &Rc<App>, parent: &Frame) -> bool {
     let dialog = Dialog::builder(parent, &t!("Set stream info"))
         .with_style(DialogStyle::DefaultDialogStyle | DialogStyle::ResizeBorder)
-        .with_size(480, 400)
+        .with_size(480, 440)
         .build();
     let panel = Panel::builder(&dialog).build();
     let sizer = BoxSizer::builder(Orientation::Vertical).build();
@@ -48,7 +49,9 @@ pub fn show(app: &Rc<App>, parent: &Frame) -> bool {
         "Stream description input",
     );
 
-    let quality_label = StaticText::builder(&panel).with_label(&t!("Quality")).build();
+    let quality_label = StaticText::builder(&panel)
+        .with_label(&t!("Quality"))
+        .build();
     let quality_choice = Choice::builder(&panel).build();
     super::set_accessible_name(&quality_choice, &t!("Quality"));
     super::help::tag(
@@ -66,6 +69,26 @@ pub fn show(app: &Rc<App>, parent: &Frame) -> bool {
         .position(|&kbps| kbps == current_bitrate)
         .unwrap_or_else(|| QUALITY_KBPS.iter().position(|&kbps| kbps == 128).unwrap());
     quality_choice.set_selection(quality_index as u32);
+
+    let format_label = StaticText::builder(&panel)
+        .with_label(&t!("Stream format"))
+        .build();
+    let format_choice = Choice::builder(&panel).build();
+    super::set_accessible_name(&format_choice, &t!("Stream format"));
+    super::help::tag(
+        &format_choice,
+        "dialog.streamInfo.format",
+        "Stream audio format choice",
+    );
+    for format in STREAM_FORMATS {
+        format_choice.append(&format.display_name());
+    }
+    let current_format = app.config.borrow().audio.format;
+    let format_index = STREAM_FORMATS
+        .iter()
+        .position(|&format| format == current_format)
+        .unwrap_or(0);
+    format_choice.set_selection(format_index as u32);
 
     let archive_check = CheckBox::builder(&panel)
         .with_label(&t!("Archive the stream"))
@@ -147,7 +170,10 @@ pub fn show(app: &Rc<App>, parent: &Frame) -> bool {
             &if linked {
                 label.to_string()
             } else {
-                t!("{label}, unavailable until a Mastodon account is linked in Preferences", label = label)
+                t!(
+                    "{label}, unavailable until a Mastodon account is linked in Preferences",
+                    label = label
+                )
             },
         );
     }
@@ -170,6 +196,8 @@ pub fn show(app: &Rc<App>, parent: &Frame) -> bool {
     sizer.add(&description_input, 1, SizerFlag::Expand | SizerFlag::All, 4);
     sizer.add(&quality_label, 0, SizerFlag::All, 4);
     sizer.add(&quality_choice, 0, SizerFlag::Expand | SizerFlag::All, 4);
+    sizer.add(&format_label, 0, SizerFlag::All, 4);
+    sizer.add(&format_choice, 0, SizerFlag::Expand | SizerFlag::All, 4);
     sizer.add(&archive_check, 0, SizerFlag::All, 8);
     sizer.add(&record_check, 0, SizerFlag::All, 8);
     sizer.add_sizer(&mastodon_group, 0, SizerFlag::Expand | SizerFlag::All, 4);
@@ -213,7 +241,15 @@ pub fn show(app: &Rc<App>, parent: &Frame) -> bool {
                 .get_selection()
                 .map(|i| QUALITY_KBPS[i as usize])
                 .unwrap_or(128);
-            app.config.borrow_mut().audio.bitrate_kbps = kbps;
+            let format = format_choice
+                .get_selection()
+                .and_then(|i| STREAM_FORMATS.get(i as usize))
+                .copied()
+                .unwrap_or(StreamFormat::Mp3);
+            let mut config = app.config.borrow_mut();
+            config.audio.bitrate_kbps = kbps;
+            config.audio.format = format;
+            drop(config);
             app.save_config();
 
             dialog_for_ok.end_modal(ID_OK);

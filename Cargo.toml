@@ -95,6 +95,9 @@ urlencoding = "2"
 
 wasapi = "0.23"
 mp3lame-encoder = "0.2"
+# FDK AAC is built from its vendored source by the binding, so AAC streaming
+# does not need a separately installed encoder or a runtime DLL.
+fdk-aac = "0.8"
 rtrb = "0.3"
 hound = "3.5"
 vst3-host = { version = "0.7", default-features = false }

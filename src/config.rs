@@ -453,10 +453,26 @@ pub enum StreamFormat {
 }
 
 impl StreamFormat {
-    pub fn display_name(self) -> &'static str {
+    pub fn display_name(self) -> String {
         match self {
-            StreamFormat::Mp3 => "MP3",
-            StreamFormat::Aac => "AAC",
+            StreamFormat::Mp3 => crate::t!("MP3"),
+            StreamFormat::Aac => crate::t!("AAC"),
+        }
+    }
+
+    /// The elementary-stream MIME type Icecast announces to listeners.
+    pub const fn content_type(self) -> &'static str {
+        match self {
+            StreamFormat::Mp3 => "audio/mpeg",
+            StreamFormat::Aac => "audio/aac",
+        }
+    }
+
+    /// Extension for a local recording with this elementary stream.
+    pub const fn file_extension(self) -> &'static str {
+        match self {
+            StreamFormat::Mp3 => "mp3",
+            StreamFormat::Aac => "aac",
         }
     }
 }
@@ -1324,8 +1340,7 @@ mod tests {
 
     #[test]
     fn a_partial_compressor_fills_in_defaults() {
-        let compressor: CompressorConfig =
-            serde_json::from_str(r#"{ "threshold": 30 }"#).unwrap();
+        let compressor: CompressorConfig = serde_json::from_str(r#"{ "threshold": 30 }"#).unwrap();
         assert_eq!(compressor.threshold, 30);
         assert_eq!(compressor.ratio, 4);
         assert_eq!(compressor.attack_ms, 10);

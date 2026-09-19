@@ -7,9 +7,9 @@ mod app_picker;
 mod audio_prefs;
 mod buses;
 mod chat;
+mod compressor_dialog;
 mod connect_dialog;
 mod cue_feed;
-mod compressor_dialog;
 mod ducker_dialog;
 mod fx;
 mod fx_editor;
@@ -38,13 +38,13 @@ mod stream_info_dialog;
 mod update;
 mod update_dialog;
 
-use crate::t;
 use crate::audio::{
     AudioEngine, EngineCommand, FeedKind, RoutingUpdate, SourceSpec, capture::CaptureKind,
 };
 use crate::config::{Config, SiteConfig, SourceConfig, SourceKindConfig, StreamingServiceType};
 use crate::net::{NetCommand, NetEvent, NetHandle, ServiceProfile};
 use crate::source_name::NameContext;
+use crate::t;
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
@@ -1798,15 +1798,21 @@ impl App {
                 return;
             }
         }
-        let (bitrate, path) = {
+        let (format, bitrate, path) = {
             let config = self.config.borrow();
-            let desired = config.archiving.recording_dir().join(recording_filename());
+            let format = config.audio.format;
+            let desired = config
+                .archiving
+                .recording_dir()
+                .join(recording_filename(format));
             (
+                format,
                 config.audio.bitrate_kbps,
                 crate::audio::recorder::unique_path(&desired),
             )
         };
         self.engine.send(EngineCommand::StartRecording {
+            format,
             bitrate_kbps: bitrate,
             path,
         });
@@ -1960,14 +1966,20 @@ impl App {
 }
 
 /// Builds a recording file name from the current local date/time:
-/// `recording_<yyyy-mm-dd>_<HH-MM-SS>.mp3`. The prefix is always the literal
+/// `recording_<yyyy-mm-dd>_<HH-MM-SS>.<format>`. The prefix is always the literal
 /// word "recording" so files sort together regardless of the stream title.
-fn recording_filename() -> String {
+fn recording_filename(format: crate::config::StreamFormat) -> String {
     use windows::Win32::System::SystemInformation::GetLocalTime;
     let t = unsafe { GetLocalTime() };
     format!(
-        "recording_{:04}-{:02}-{:02}_{:02}-{:02}-{:02}.mp3",
-        t.wYear, t.wMonth, t.wDay, t.wHour, t.wMinute, t.wSecond
+        "recording_{:04}-{:02}-{:02}_{:02}-{:02}-{:02}.{}",
+        t.wYear,
+        t.wMonth,
+        t.wDay,
+        t.wHour,
+        t.wMinute,
+        t.wSecond,
+        format.file_extension()
     )
 }
 
@@ -1989,7 +2001,10 @@ fn validate_site_url(raw: &str) -> Result<String, String> {
         return Err(t!("Enter a full Audiopub URL starting with https://"));
     }
     let url = reqwest::Url::parse(trimmed).map_err(|_| {
-        t!("{url} is not a valid URL. It should look like https://audiopub.site", url = format!("{trimmed:?}"))
+        t!(
+            "{url} is not a valid URL. It should look like https://audiopub.site",
+            url = format!("{trimmed:?}")
+        )
     })?;
     match url.scheme() {
         "https" => {}
@@ -2130,11 +2145,15 @@ pub fn begin_stream(app: &Rc<App>) {
     // its first send for exactly that reason — everything encoded between here
     // and the handshake completing is stale by the time anyone could hear it.
     let (tx, rx) = tokio::sync::mpsc::channel(200);
-    let bitrate = app.config.borrow().audio.bitrate_kbps;
+    let (format, bitrate) = {
+        let audio = &app.config.borrow().audio;
+        (audio.format, audio.bitrate_kbps)
+    };
     // A new encoder is a clean slate; the last stream's failure must not stay
     // on this one's status line.
     app.run.borrow_mut().encoder_failed = false;
     app.engine.send(EngineCommand::StartEncoding {
+        format,
         bitrate_kbps: bitrate,
         out: tx,
     });
@@ -2144,11 +2163,12 @@ pub fn begin_stream(app: &Rc<App>) {
             .borrow()
             .archiving
             .recording_dir()
-            .join(recording_filename());
+            .join(recording_filename(format));
         // Guard against clobbering a prior recording that resolved to the same
         // name (a stop/start within the same one-second timestamp).
         let path = crate::audio::recorder::unique_path(&desired);
         app.engine.send(EngineCommand::StartRecording {
+            format,
             bitrate_kbps: bitrate,
             path,
         });
@@ -2162,7 +2182,7 @@ pub fn begin_stream(app: &Rc<App>) {
         title: info.title,
         description: info.description,
         archive: info.archive,
-        content_type: "audio/mpeg".into(),
+        content_type: format.content_type().into(),
         audio: rx,
     });
     {
@@ -2196,22 +2216,31 @@ fn recording_failure_message(
         .map(|p| p.display().to_string())
         .unwrap_or_else(|| failure.path.display().to_string());
     let cause = match failure.kind {
-        Some(ErrorKind::NotFound) => t!("The folder {folder} does not exist.\n\n\
+        Some(ErrorKind::NotFound) => t!(
+            "The folder {folder} does not exist.\n\n\
              Choose a folder that does exist under Recording folder in Preferences, \
-             or create that one.", folder = folder),
-        Some(ErrorKind::PermissionDenied) => t!("Pubsplash is not allowed to write to {folder}.\n\n\
-             Choose a different folder under Recording folder in Preferences.", folder = folder),
-        Some(_) => t!("The recording file could not be created in {folder}.\n\n\
-             Check that the folder exists and can be written to, or choose another \
-             one under Recording folder in Preferences.", folder = folder),
-        None => t!(
-            "The MP3 encoder for the recording could not be created, so nothing \
-             could be written."
+             or create that one.",
+            folder = folder
         ),
+        Some(ErrorKind::PermissionDenied) => t!(
+            "Pubsplash is not allowed to write to {folder}.\n\n\
+             Choose a different folder under Recording folder in Preferences.",
+            folder = folder
+        ),
+        Some(_) => t!(
+            "The recording file could not be created in {folder}.\n\n\
+             Check that the folder exists and can be written to, or choose another \
+             one under Recording folder in Preferences.",
+            folder = folder
+        ),
+        None => t!("The recording encoder could not be created, so nothing \
+             could be written."),
     };
     let mut message = t!("The recording did not start.\n\n{cause}", cause = cause);
     if streaming {
-        message.push_str(&t!("\n\nThe stream itself is unaffected and is still live."));
+        message.push_str(&t!(
+            "\n\nThe stream itself is unaffected and is still live."
+        ));
     }
     message.push_str(&t!("\n\nDetails: {detail}", detail = detail));
     message
@@ -2709,7 +2738,11 @@ fn build_menu(app: &Rc<App>, frame: &Frame) {
         )
         .build();
     let help_menu = Menu::builder()
-        .append_item(ID_MENU_ABOUT, &t!("About Pubsplash"), &t!("Version information"))
+        .append_item(
+            ID_MENU_ABOUT,
+            &t!("About Pubsplash"),
+            &t!("Version information"),
+        )
         .append_item(
             ID_MENU_README,
             &t!("Open Readme"),
@@ -2816,7 +2849,13 @@ fn launch_sound_pack_manager() -> Result<(), String> {
     std::process::Command::new(&manager)
         .spawn()
         .map(|_| ())
-        .map_err(|e| t!("Could not start {path}: {e}", path = manager.display(), e = e))
+        .map_err(|e| {
+            t!(
+                "Could not start {path}: {e}",
+                path = manager.display(),
+                e = e
+            )
+        })
 }
 
 /// Opens a documentation file that ships with Pubsplash, falling back to the
@@ -2834,8 +2873,7 @@ fn open_doc(name: &str, fallback_url: &str) -> Result<(), String> {
             return Ok(());
         }
     }
-    shell_open(fallback_url)
-        .map_err(|e| t!("Could not open {url}: {e}", url = fallback_url, e = e))
+    shell_open(fallback_url).map_err(|e| t!("Could not open {url}: {e}", url = fallback_url, e = e))
 }
 
 /// Opens the data directory — settings, logs, crash dumps — in Explorer.
@@ -3268,7 +3306,11 @@ fn pump_events(app: &Rc<App>) {
             }
             NetEvent::ChatSendFailed { message } => {
                 app.widgets(|w| {
-                    show_error(&w.frame, &t!("Chat"), &t!("Message not sent: {message}", message = message))
+                    show_error(
+                        &w.frame,
+                        &t!("Chat"),
+                        &t!("Message not sent: {message}", message = message),
+                    )
                 });
             }
         }
@@ -3494,7 +3536,11 @@ fn pump_scan_events(app: &Rc<App>) {
                 crate::vst::save_cache(&cache);
                 let total_known = cache.plugins.len();
                 *app.plugins.borrow_mut() = cache;
-                let mut message = t!("Scan complete. {found} new plugins found ({total_known} known in total).", found = found, total_known = total_known);
+                let mut message = t!(
+                    "Scan complete. {found} new plugins found ({total_known} known in total).",
+                    found = found,
+                    total_known = total_known
+                );
                 if rejected > 0 {
                     message.push_str(&format!("\n{rejected} files could not be used as plugins."));
                 }
@@ -4061,12 +4107,18 @@ mod token_tests {
 
     #[test]
     fn recording_filename_is_stamped() {
-        let name = super::recording_filename();
+        let name = super::recording_filename(crate::config::StreamFormat::Mp3);
         // "recording_<yyyy-mm-dd>_<HH-MM-SS>.mp3"
         assert!(name.starts_with("recording_"), "got {name}");
         assert!(name.ends_with(".mp3"));
         let stamp = name.trim_end_matches(".mp3").rsplit('_').next().unwrap();
         assert_eq!(stamp.len(), 8, "time HH-MM-SS in {name}");
+    }
+
+    #[test]
+    fn aac_recording_filename_uses_aac_extension() {
+        let name = super::recording_filename(crate::config::StreamFormat::Aac);
+        assert!(name.ends_with(".aac"), "got {name}");
     }
 }
 

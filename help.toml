@@ -847,6 +847,12 @@ file = "src/ui/stream_info_dialog.rs"
 message = "Type a description for your live stream which appears under the title on Audiopub."
 
 [[control]]
+id = "dialog.streamInfo.format"
+label = "Stream audio format choice"
+file = "src/ui/stream_info_dialog.rs"
+message = "Choose MP3 for the widest listener compatibility, or AAC for players and servers that support AAC streams. The recording uses the same format."
+
+[[control]]
 id = "dialog.streamInfo.mastodonPeriodic"
 label = "Post periodic still-streaming announcements checkbox"
 file = "src/ui/stream_info_dialog.rs"

@@ -4,6 +4,8 @@
 
 ### Additions
 
+- Added MP3 and AAC format choices to the Set stream info dialog.
+
 - Added a built-in per-source compressor with threshold, ratio, attack, release, and output-gain controls.
 
 - Added interface localization with embedded message catalogs and Spanish translations.

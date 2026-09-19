@@ -1435,4 +1435,3 @@ mod picker_contract {
         }
     }
 }
-
