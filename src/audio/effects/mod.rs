@@ -16,9 +16,11 @@
 
 pub mod compressor;
 pub mod ducker;
+pub mod noise_suppressor;
 
 pub use compressor::{Compressor, CompressorSpec};
 pub use ducker::{Ducker, DuckerSpec};
+pub use noise_suppressor::{NoiseSuppressor, NoiseSuppressorSpec};
 
 /// One effect as the engine holds it, carrying whatever state it needs between
 /// blocks.
@@ -26,6 +28,7 @@ pub use ducker::{Ducker, DuckerSpec};
 pub enum ActiveEffect {
     Ducker(Ducker),
     Compressor(Compressor),
+    NoiseSuppressor(NoiseSuppressor),
 }
 
 /// One effect's settings, as the UI hands them down.
@@ -37,6 +40,7 @@ pub enum ActiveEffect {
 pub enum EffectSpec {
     Ducker(DuckerSpec),
     Compressor(CompressorSpec),
+    NoiseSuppressor(NoiseSuppressorSpec),
 }
 
 impl EffectSpec {
@@ -47,6 +51,10 @@ impl EffectSpec {
             (self, other),
             (EffectSpec::Ducker(_), ActiveEffect::Ducker(_))
                 | (EffectSpec::Compressor(_), ActiveEffect::Compressor(_))
+                | (
+                    EffectSpec::NoiseSuppressor(_),
+                    ActiveEffect::NoiseSuppressor(_)
+                )
         )
     }
 }
@@ -56,6 +64,9 @@ impl ActiveEffect {
         match spec {
             EffectSpec::Ducker(spec) => ActiveEffect::Ducker(Ducker::new(spec)),
             EffectSpec::Compressor(spec) => ActiveEffect::Compressor(Compressor::new(spec)),
+            EffectSpec::NoiseSuppressor(spec) => {
+                ActiveEffect::NoiseSuppressor(NoiseSuppressor::new(spec))
+            }
         }
     }
 
@@ -65,6 +76,9 @@ impl ActiveEffect {
             (ActiveEffect::Ducker(ducker), EffectSpec::Ducker(spec)) => ducker.adopt(spec),
             (ActiveEffect::Compressor(compressor), EffectSpec::Compressor(spec)) => {
                 compressor.adopt(spec)
+            }
+            (ActiveEffect::NoiseSuppressor(suppressor), EffectSpec::NoiseSuppressor(spec)) => {
+                suppressor.adopt(spec)
             }
             _ => unreachable!("effect kind checked before adopting settings"),
         }
@@ -79,6 +93,7 @@ impl ActiveEffect {
         match self {
             ActiveEffect::Ducker(ducker) => ducker.process(block, levels),
             ActiveEffect::Compressor(compressor) => compressor.process(block),
+            ActiveEffect::NoiseSuppressor(suppressor) => suppressor.process(block),
         }
     }
 }

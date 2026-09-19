@@ -23,7 +23,9 @@
 //! the Desktop Audio page's refusal depends on.
 
 use super::App;
-use crate::config::{CompressorConfig, DuckerConfig, EffectConfig, SourceConfig};
+use crate::config::{
+    CompressorConfig, DuckerConfig, EffectConfig, NoiseSuppressorConfig, SourceConfig,
+};
 use crate::state::{ListEdit, move_down, move_up};
 use crate::t;
 use std::cell::RefCell;
@@ -392,6 +394,7 @@ fn available_effects() -> Vec<EffectConfig> {
     vec![
         EffectConfig::Ducker(DuckerConfig::default()),
         EffectConfig::Compressor(CompressorConfig::default()),
+        EffectConfig::NoiseSuppressor(NoiseSuppressorConfig::default()),
     ]
 }
 
@@ -399,6 +402,7 @@ fn effect_type_name(effect: &EffectConfig) -> String {
     match effect {
         EffectConfig::Ducker(_) => t!("Auto-ducker"),
         EffectConfig::Compressor(_) => t!("Compressor"),
+        EffectConfig::NoiseSuppressor(_) => t!("Noise suppressor"),
     }
 }
 
@@ -411,6 +415,8 @@ fn configure(parent: &Dialog, effect: &EffectConfig, keys: &[KeyChoice]) -> Opti
         EffectConfig::Compressor(config) => {
             super::compressor_dialog::edit(parent, config).map(EffectConfig::Compressor)
         }
+        EffectConfig::NoiseSuppressor(config) => super::noise_suppressor_dialog::edit(parent, config)
+            .map(EffectConfig::NoiseSuppressor),
     }
 }
 
@@ -444,6 +450,11 @@ fn row_label(index: usize, effect: &EffectConfig, keys: &[KeyChoice]) -> String 
             threshold = config.threshold,
             ratio = config.ratio,
             gain = config.output_gain
+        ),
+        EffectConfig::NoiseSuppressor(config) => t!(
+            "{position}. Noise suppressor, amount {amount}%",
+            position = index + 1,
+            amount = config.amount
         ),
     }
 }

@@ -798,6 +798,24 @@ impl Default for SourceConfig {
 pub enum EffectConfig {
     Ducker(DuckerConfig),
     Compressor(CompressorConfig),
+    NoiseSuppressor(NoiseSuppressorConfig),
+}
+
+/// Reduces continuous background noise with the RNNoise speech model.
+///
+/// `amount` blends the cleaned signal back with the original, so it remains
+/// useful when the fully processed sound is too aggressive for a source.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(default)]
+pub struct NoiseSuppressorConfig {
+    /// Share of the processed signal, in percent (100 is fully suppressed).
+    pub amount: u32,
+}
+
+impl Default for NoiseSuppressorConfig {
+    fn default() -> Self {
+        Self { amount: 100 }
+    }
 }
 
 /// Evens out a source by reducing loud passages above a threshold.
@@ -1323,6 +1341,11 @@ mod tests {
         let json =
             serde_json::to_string(&EffectConfig::Compressor(CompressorConfig::default())).unwrap();
         assert!(json.contains("\"type\":\"compressor\""), "got {json}");
+        let json = serde_json::to_string(&EffectConfig::NoiseSuppressor(
+            NoiseSuppressorConfig::default(),
+        ))
+        .unwrap();
+        assert!(json.contains("\"type\":\"noise_suppressor\""), "got {json}");
     }
 
     /// A ducker written by an older build that lacked one of these fields must
@@ -1346,6 +1369,12 @@ mod tests {
         assert_eq!(compressor.attack_ms, 10);
         assert_eq!(compressor.release_ms, 150);
         assert_eq!(compressor.output_gain, 100);
+    }
+
+    #[test]
+    fn a_partial_noise_suppressor_fills_in_defaults() {
+        let suppressor: NoiseSuppressorConfig = serde_json::from_str("{}").unwrap();
+        assert_eq!(suppressor.amount, 100);
     }
 
     use super::*;

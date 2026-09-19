@@ -24,6 +24,7 @@ mod mastodon_post;
 mod mastodon_prefs;
 mod mastodon_templates;
 mod native_acc;
+mod noise_suppressor_dialog;
 mod panes;
 mod picker_acc;
 mod preferences;
@@ -1099,7 +1100,7 @@ fn effect_specs(
     own_index: usize,
     source_index: impl Fn(&str) -> Option<usize>,
 ) -> Vec<crate::audio::effects::EffectSpec> {
-    use crate::audio::effects::{CompressorSpec, DuckerSpec, EffectSpec};
+    use crate::audio::effects::{CompressorSpec, DuckerSpec, EffectSpec, NoiseSuppressorSpec};
     source
         .effects
         .iter()
@@ -1120,6 +1121,9 @@ fn effect_specs(
                     compressor.release_ms,
                     compressor.output_gain,
                 ))
+            }
+            crate::config::EffectConfig::NoiseSuppressor(suppressor) => {
+                EffectSpec::NoiseSuppressor(NoiseSuppressorSpec::new(suppressor.amount))
             }
         })
         .collect()

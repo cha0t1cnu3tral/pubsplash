@@ -373,6 +373,12 @@ file = "src/ui/buses.rs"
 message = "Shows the list of plugins you lack to apply this FX chain in full."
 
 [[control]]
+id = "dialog.noiseSuppressor.amount"
+label = "Noise suppressor amount slider"
+file = "src/ui/noise_suppressor_dialog.rs"
+message = "Controls how much RNNoise-processed audio replaces the original. At 100%, background noise such as fan hum, keyboard clicks, and room noise is reduced as much as the speech model can manage. Lower it if the fully processed sound is too strong for this source; 0% leaves the audio unchanged."
+
+[[control]]
 id = "dialog.preferences.archive.archiveDefault"
 label = "Archive streams by default checkbox"
 file = "src/ui/preferences.rs"

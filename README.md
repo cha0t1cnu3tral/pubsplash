@@ -2,7 +2,7 @@
 
 Pubsplash is a Windows app for accessible live audio streaming. It sends a mix to Audiopub or a direct Icecast server and works well with screen readers such as NVDA and JAWS.
 
-You can combine microphones, desktop audio, application audio, text-to-speech, and sound cues; adjust the mix; add VST effects; read and send Audiopub chat; and record an MP3 locally.
+You can combine microphones, desktop audio, application audio, text-to-speech, and sound cues; adjust the mix; suppress background noise with RNNoise; add VST effects; read and send Audiopub chat; and record an MP3 locally.
 
 ## Before you begin
 
@@ -72,7 +72,7 @@ Streaming and standalone recording cannot run at the same time. Recordings are n
 - **Scenes** let you prepare different source combinations and switch between them.
 - **Sources** produce audio. Their names describe what they capture, making several microphones or applications easier to distinguish.
 - **Buses** are shared mixing points. Send multiple sources to a bus when they should share volume or effects.
-- **Effects** are VST2 or VST3 plugins on a bus or the master output. Effects run from top to bottom and can be bypassed while live.
+- **Effects** include built-in per-source auto-ducking, compression, and RNNoise noise suppression, plus VST2 or VST3 plugins on a bus or the master output. Effects run from top to bottom and can be bypassed while live.
 - **FX chains** can be saved in the library or exported as .pubfx files.
 
 To route a source, select it on **Scenes and Sources**, choose **Sends...**, and use the checkable destination list. Leave **Master output** checked for a dry signal plus bus effects; uncheck it when the source should be heard only through its buses.
