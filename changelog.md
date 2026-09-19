@@ -2,27 +2,23 @@
 
 ## Unreleased
 
+## 0.2.0
+
 ### Additions
 
-- Added MP3 and AAC format choices to the Set stream info dialog.
+- Added Spanish localization.
 
-- Added a built-in per-source compressor with threshold, ratio, attack, release, and output-gain controls.
+- Added AAC support.
 
-- Added a built-in RNNoise noise suppressor with an adjustable suppression amount.
+- Added a per-source compressor.
 
-- Added interface localization with embedded message catalogs and Spanish translations.
-
-- Added an interface-language setting that can follow supported Windows display languages.
-
-- Added the `gen-po` catalog generation and validation tool.
+- Added a per-source noise suppressor.
 
 ### Fixes
 
-- SAPI 5 voice discovery now includes voices supplied by dynamic token enumerators such as RHVoice.
+- Fixed bug with third-party SAPI voices not showing.
 
 ### Changes
-
-- Removed the agent policy prohibiting UI mnemonics.
 
 ## 0.1.9
 
