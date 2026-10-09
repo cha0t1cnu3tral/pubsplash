@@ -285,6 +285,10 @@ pub struct SiteConfig {
     /// Audiopub and direct Icecast services.
     pub icecast_server: String,
     pub icecast_port: u16,
+    /// Validate and encrypt direct Icecast source connections with TLS.
+    pub icecast_tls: bool,
+    /// Use HTTP chunked body framing for HTTP reverse proxies.
+    pub icecast_chunked: bool,
     /// Raw Icecast mount point, with or without a leading slash.
     pub icecast_mount: String,
     pub icecast_username: String,
@@ -302,6 +306,8 @@ impl Default for SiteConfig {
             password: Secret::default(),
             icecast_server: String::new(),
             icecast_port: 8000,
+            icecast_tls: false,
+            icecast_chunked: false,
             icecast_mount: String::new(),
             icecast_username: "source".to_string(),
             icecast_password: Secret::default(),
@@ -1834,6 +1840,16 @@ mod tests {
     }
 
     #[test]
+    fn legacy_icecast_settings_default_to_plain_tcp() {
+        let service: SiteConfig = serde_json::from_str(
+            r#"{"service_type":"icecast","icecast_server":"ice.example.org"}"#,
+        )
+        .unwrap();
+        assert!(!service.icecast_tls);
+        assert!(!service.icecast_chunked);
+    }
+
+    #[test]
     fn icecast_service_roundtrips() {
         let path = temp_path("icecast_service.json");
         let mut config = Config::default();
@@ -1843,6 +1859,8 @@ mod tests {
             service_type: StreamingServiceType::Icecast,
             icecast_server: "ice.example.org".into(),
             icecast_port: 9000,
+            icecast_tls: true,
+            icecast_chunked: true,
             icecast_mount: "/live".into(),
             icecast_username: "dj".into(),
             icecast_password: Secret::new("secret"),
@@ -1855,6 +1873,8 @@ mod tests {
         assert_eq!(service.nickname, "Station");
         assert_eq!(service.icecast_server, "ice.example.org");
         assert_eq!(service.icecast_port, 9000);
+        assert!(service.icecast_tls);
+        assert!(service.icecast_chunked);
         assert_eq!(service.icecast_mount, "/live");
         assert_eq!(service.icecast_username, "dj");
         assert_eq!(service.icecast_password.as_str(), "secret");

@@ -1,13 +1,14 @@
 //! Icecast source-protocol client.
 //!
-//! Icecast source connections use plain TCP:
+//! Icecast source connections use TCP with optional validated TLS:
 //! `PUT http://<host>:<port>/<mount>` with Basic auth,
 //! `Expect: 100-continue`, then an endless body of encoded audio frames.
 
 use crate::secret::Secret;
+use crate::t;
 use std::io::ErrorKind;
 use std::time::Duration;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use tokio::net::TcpStream;
 use tokio::time::timeout;
 
@@ -122,6 +123,10 @@ pub fn split_host_port(input: &str) -> Result<(String, Option<u16>), String> {
 pub struct IcecastTarget {
     /// Host and port, e.g. `live.audiopub.site:8000`.
     pub host: String,
+    /// TLS is established and verified before credentials are written.
+    pub tls: bool,
+    /// Standard HTTP body framing; opt-in for older Icecast compatibility.
+    pub chunked: bool,
     /// Mount without a leading slash, or `/` for the server root.
     pub mount: String,
     /// Source username, usually `source`.
@@ -132,9 +137,13 @@ pub struct IcecastTarget {
     pub content_type: String,
 }
 
+trait SourceStream: AsyncRead + AsyncWrite + Unpin + Send + std::fmt::Debug {}
+impl<T: AsyncRead + AsyncWrite + Unpin + Send + std::fmt::Debug> SourceStream for T {}
+
 #[derive(Debug)]
 pub struct IcecastConnection {
-    stream: TcpStream,
+    stream: Box<dyn SourceStream>,
+    chunked: bool,
     /// Set by any failed [`IcecastConnection::send`].
     ///
     /// A `write_all` cancelled by its timeout may have written a *partial* MP3
@@ -149,6 +158,8 @@ pub struct IcecastConnection {
 pub enum IcecastError {
     #[error("connection failed: {0}")]
     Io(#[from] std::io::Error),
+    #[error("TLS connection failed: {0}")]
+    Tls(#[from] tokio_native_tls::native_tls::Error),
     /// Timed out doing `what` — "connecting to the streaming server",
     /// "waiting for the server to accept the stream", "sending audio".
     #[error("timed out {what}")]
@@ -168,6 +179,16 @@ pub enum IcecastError {
 }
 
 impl IcecastError {
+    pub fn user_message(&self) -> String {
+        match self {
+            Self::Tls(error) => t!("TLS connection failed: {error}", error = error),
+            Self::Timeout {
+                what: "establishing TLS with the streaming server",
+            } => t!("The TLS connection to the streaming server timed out."),
+            _ => self.to_string(),
+        }
+    }
+
     /// Whether reconnecting could plausibly succeed.
     ///
     /// The interesting case is 403, which Icecast uses for three unrelated
@@ -177,6 +198,7 @@ impl IcecastError {
     /// fast reconnect and must be retried rather than reported as fatal.
     pub fn retryable(&self) -> bool {
         match self {
+            IcecastError::Tls(_) => false,
             IcecastError::Io(_) | IcecastError::Timeout { .. } => true,
             IcecastError::Rejected {
                 status,
@@ -202,6 +224,7 @@ impl IcecastError {
     /// protocol's. Reads as the tail of "Audio connection lost (...)".
     pub fn explain(&self) -> String {
         match self {
+            IcecastError::Tls(e) => t!("TLS connection failed: {error}", error = e),
             IcecastError::Timeout { .. } => "the connection timed out".to_string(),
             IcecastError::Io(e) => match e.kind() {
                 ErrorKind::ConnectionRefused => "the server refused the connection".to_string(),
@@ -258,7 +281,7 @@ fn parse_handshake(head: &str) -> Result<(), IcecastError> {
 ///
 /// Byte-at-a-time because the body that follows is ours to write, not to read:
 /// over-reading here would consume nothing useful and complicate nothing well.
-async fn read_head(stream: &mut TcpStream) -> Result<String, IcecastError> {
+async fn read_head<S: AsyncRead + Unpin + ?Sized>(stream: &mut S) -> Result<String, IcecastError> {
     let mut buf = Vec::with_capacity(1024);
     let mut byte = [0u8; 1];
     loop {
@@ -318,12 +341,40 @@ impl IcecastConnection {
     /// Connects and performs the source handshake. Returns once the server
     /// has accepted the stream (HTTP 100/200).
     pub async fn connect(target: &IcecastTarget) -> Result<Self, IcecastError> {
-        let mut stream = timeout(CONNECT_TIMEOUT, TcpStream::connect(&target.host))
+        let connector = if target.tls {
+            Some(tokio_native_tls::native_tls::TlsConnector::new()?)
+        } else {
+            None
+        };
+        Self::connect_with_connector(target, connector).await
+    }
+
+    async fn connect_with_connector(
+        target: &IcecastTarget,
+        connector: Option<tokio_native_tls::native_tls::TlsConnector>,
+    ) -> Result<Self, IcecastError> {
+        let stream = timeout(CONNECT_TIMEOUT, TcpStream::connect(&target.host))
             .await
             .map_err(|_| IcecastError::Timeout {
                 what: "connecting to the streaming server",
             })??;
         stream.set_nodelay(true)?;
+        let mut stream: Box<dyn SourceStream> = if target.tls {
+            let (hostname, _) = split_host_port(&target.host)
+                .map_err(|message| std::io::Error::new(ErrorKind::InvalidInput, message))?;
+            let hostname = hostname.trim_start_matches('[').trim_end_matches(']');
+            let connector = tokio_native_tls::TlsConnector::from(
+                connector.expect("TLS target requires a connector"),
+            );
+            let secured = timeout(CONNECT_TIMEOUT, connector.connect(hostname, stream))
+                .await
+                .map_err(|_| IcecastError::Timeout {
+                    what: "establishing TLS with the streaming server",
+                })??;
+            Box::new(secured)
+        } else {
+            Box::new(stream)
+        };
 
         let username = if target.username.trim().is_empty() {
             "source"
@@ -344,12 +395,18 @@ impl IcecastConnection {
              Content-Type: {ctype}\r\n\
              Expect: 100-continue\r\n\
              Ice-Public: 0\r\n\
+             {framing}\
              \r\n",
             mount_path = mount_path,
             host = target.host,
             auth = auth,
             version = env!("CARGO_PKG_VERSION"),
             ctype = target.content_type,
+            framing = if target.chunked {
+                "Transfer-Encoding: chunked\r\n"
+            } else {
+                ""
+            },
         );
         // One timeout around the request *and* the response, because the budget
         // the user cares about is the total time to "accepted", not either half.
@@ -357,6 +414,7 @@ impl IcecastConnection {
         // failure it sends 401 with an `icecast-auth-message` saying why.
         let head = timeout(HANDSHAKE_TIMEOUT, async {
             stream.write_all(request.as_bytes()).await?;
+            stream.flush().await?;
             read_head(&mut stream).await
         })
         .await
@@ -372,6 +430,7 @@ impl IcecastConnection {
         );
         Ok(Self {
             stream,
+            chunked: target.chunked,
             poisoned: false,
         })
     }
@@ -388,7 +447,23 @@ impl IcecastConnection {
                 "connection already failed",
             )));
         }
-        match timeout(WRITE_TIMEOUT, self.stream.write_all(data)).await {
+        if data.is_empty() {
+            return Ok(());
+        }
+        match timeout(WRITE_TIMEOUT, async {
+            if self.chunked {
+                self.stream
+                    .write_all(format!("{:x}\r\n", data.len()).as_bytes())
+                    .await?;
+            }
+            self.stream.write_all(data).await?;
+            if self.chunked {
+                self.stream.write_all(b"\r\n").await?;
+            }
+            self.stream.flush().await
+        })
+        .await
+        {
             Ok(Ok(())) => Ok(()),
             Ok(Err(e)) => {
                 self.poisoned = true;
@@ -408,13 +483,152 @@ impl IcecastConnection {
     /// Bounded, because this runs on the app-exit path: a half-open socket here
     /// would otherwise hold the network thread that `NetHandle::drop` joins.
     pub async fn close(mut self) {
-        let _ = timeout(CLOSE_TIMEOUT, self.stream.shutdown()).await;
+        let _ = timeout(CLOSE_TIMEOUT, async {
+            if self.chunked && !self.poisoned {
+                self.stream.write_all(b"0\r\n\r\n").await?;
+            }
+            self.stream.shutdown().await
+        })
+        .await;
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // This identity is public test data, never a production credential.
+    fn test_acceptor() -> tokio_native_tls::TlsAcceptor {
+        let identity = tokio_native_tls::native_tls::Identity::from_pkcs12(
+            include_bytes!("../../tests/fixtures/icecast-test.p12"),
+            "test-only",
+        )
+        .unwrap();
+        tokio_native_tls::TlsAcceptor::from(
+            tokio_native_tls::native_tls::TlsAcceptor::new(identity).unwrap(),
+        )
+    }
+
+    fn test_connector() -> tokio_native_tls::native_tls::TlsConnector {
+        let cert = tokio_native_tls::native_tls::Certificate::from_pem(include_bytes!(
+            "../../tests/fixtures/icecast-test-cert.pem"
+        ))
+        .unwrap();
+        tokio_native_tls::native_tls::TlsConnector::builder()
+            .add_root_certificate(cert)
+            .build()
+            .unwrap()
+    }
+
+    #[tokio::test]
+    async fn tls_source_upload_and_chunked_shutdown() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let acceptor = test_acceptor();
+        let server = tokio::spawn(async move {
+            let (sock, _) = listener.accept().await.unwrap();
+            let mut sock = acceptor.accept(sock).await.unwrap();
+            let head = read_head(&mut sock).await.unwrap();
+            sock.write_all(b"HTTP/1.1 100 Continue\r\n\r\n")
+                .await
+                .unwrap();
+            let mut body = [0; 14];
+            sock.read_exact(&mut body).await.unwrap();
+            (head, body)
+        });
+        let target = IcecastTarget {
+            host: format!("localhost:{port}"),
+            tls: true,
+            chunked: true,
+            mount: "live".into(),
+            username: "source".into(),
+            password: Secret::new("key"),
+            content_type: "audio/mpeg".into(),
+        };
+        let mut conn = IcecastConnection::connect_with_connector(&target, Some(test_connector()))
+            .await
+            .unwrap();
+        conn.send(b"").await.unwrap();
+        conn.send(b"MP3!").await.unwrap();
+        conn.close().await;
+        let (head, body) = server.await.unwrap();
+        assert!(head.starts_with("PUT /live HTTP/1.1\r\n"));
+        assert!(head.contains("Transfer-Encoding: chunked\r\n"));
+        assert!(head.contains("Authorization: Basic c291cmNlOmtleQ=="));
+        assert_eq!(&body, b"4\r\nMP3!\r\n0\r\n\r\n");
+    }
+
+    #[tokio::test]
+    async fn tls_rejects_untrusted_certificate_and_wrong_hostname() {
+        for trusted in [false, true] {
+            let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let addr = listener.local_addr().unwrap();
+            let acceptor = test_acceptor();
+            let server = tokio::spawn(async move {
+                let (sock, _) = listener.accept().await.unwrap();
+                // A TLS backend may finish its server handshake before the client
+                // rejects the certificate. It must never receive HTTP credentials.
+                if let Ok(mut sock) = acceptor.accept(sock).await {
+                    let mut bytes = [0; 1];
+                    assert!(!matches!(sock.read(&mut bytes).await, Ok(n) if n > 0));
+                }
+            });
+            let target = IcecastTarget {
+                host: if trusted {
+                    addr.to_string()
+                } else {
+                    format!("localhost:{}", addr.port())
+                },
+                tls: true,
+                chunked: false,
+                mount: "live".into(),
+                username: "source".into(),
+                password: Secret::new("secret"),
+                content_type: "audio/mpeg".into(),
+            };
+            let result = if trusted {
+                IcecastConnection::connect_with_connector(&target, Some(test_connector())).await
+            } else {
+                IcecastConnection::connect(&target).await
+            };
+            let error = result.unwrap_err();
+            assert!(matches!(error, IcecastError::Tls(_)), "{error:?}");
+            assert!(!error.retryable());
+            server.await.unwrap();
+        }
+    }
+
+    #[tokio::test]
+    async fn chunked_upload_over_plain_http() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let server = tokio::spawn(async move {
+            let (mut sock, _) = listener.accept().await.unwrap();
+            let head = read_head(&mut sock).await.unwrap();
+            sock.write_all(b"HTTP/1.1 100 Continue\r\n\r\n")
+                .await
+                .unwrap();
+            let mut body = [0; 21];
+            sock.read_exact(&mut body).await.unwrap();
+            (head, body)
+        });
+        let target = IcecastTarget {
+            host: addr.to_string(),
+            tls: false,
+            chunked: true,
+            mount: "live".into(),
+            username: "source".into(),
+            password: Secret::new("key"),
+            content_type: "audio/mpeg".into(),
+        };
+        let mut conn = IcecastConnection::connect(&target).await.unwrap();
+        conn.send(b"MP3!").await.unwrap();
+        conn.send(b"AB").await.unwrap();
+        conn.close().await;
+        let (head, body) = server.await.unwrap();
+        assert!(head.contains("Transfer-Encoding: chunked\r\n"));
+        assert_eq!(&body, b"4\r\nMP3!\r\n2\r\nAB\r\n0\r\n\r\n");
+    }
 
     #[test]
     fn base64_matches_known_vectors() {
@@ -510,6 +724,8 @@ mod tests {
         });
 
         let target = IcecastTarget {
+            tls: false,
+            chunked: false,
             host: addr.to_string(),
             mount: "user-123".into(),
             username: "source".into(),
@@ -543,6 +759,8 @@ mod tests {
         });
 
         let target = IcecastTarget {
+            tls: false,
+            chunked: false,
             host: addr.to_string(),
             mount: "/".into(),
             username: "source".into(),
@@ -573,6 +791,8 @@ mod tests {
                 .unwrap();
         });
         let target = IcecastTarget {
+            tls: false,
+            chunked: false,
             host: addr.to_string(),
             mount: "u".into(),
             username: "source".into(),
@@ -684,6 +904,8 @@ mod tests {
         });
 
         let target = IcecastTarget {
+            tls: false,
+            chunked: false,
             host: addr.to_string(),
             mount: "u".into(),
             username: "source".into(),
@@ -720,6 +942,8 @@ mod tests {
         });
 
         let target = IcecastTarget {
+            tls: false,
+            chunked: false,
             host: addr.to_string(),
             mount: "u".into(),
             username: "source".into(),

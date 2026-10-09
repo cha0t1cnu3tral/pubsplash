@@ -1,10 +1,10 @@
 //! Setup streaming services dialog: service list, credentials, connect/disconnect.
 
-use crate::t;
 use super::{App, show_error};
 use crate::config::{MAIN_SITE_URL, SiteConfig, StreamingServiceType};
 use crate::net::NetCommand;
 use crate::secret::Secret;
+use crate::t;
 use std::rc::Rc;
 use wxdragon::prelude::*;
 
@@ -32,7 +32,9 @@ pub fn show(app: &Rc<App>, frame: &Frame) {
         "Configured streaming services list",
     );
     let service_buttons = BoxSizer::builder(Orientation::Horizontal).build();
-    let add_service = Button::builder(&panel).with_label(&t!("Add service")).build();
+    let add_service = Button::builder(&panel)
+        .with_label(&t!("Add service"))
+        .build();
     let rename_service = Button::builder(&panel)
         .with_label(&t!("Rename service"))
         .build();
@@ -84,7 +86,9 @@ pub fn show(app: &Rc<App>, frame: &Frame) {
         "dialog.connect.email",
         "Email address for the selected service",
     );
-    let password_label = StaticText::builder(&panel).with_label(&t!("Password")).build();
+    let password_label = StaticText::builder(&panel)
+        .with_label(&t!("Password"))
+        .build();
     let password_input = TextCtrl::builder(&panel)
         .with_style(TextCtrlStyle::Password)
         .build();
@@ -115,6 +119,19 @@ pub fn show(app: &Rc<App>, frame: &Frame) {
         "dialog.connect.icecastPort",
         "Icecast port for the selected service",
     );
+    let tls_input = CheckBox::builder(&panel)
+        .with_label(&t!("Use TLS (HTTPS)"))
+        .build();
+    super::help::tag(&tls_input, "dialog.connect.icecastTls", "Use TLS (HTTPS)");
+    let chunked_input = CheckBox::builder(&panel)
+        .with_label(&t!("Use HTTP chunked uploads (reverse proxy)"))
+        .build();
+    super::help::tag(
+        &chunked_input,
+        "dialog.connect.icecastChunked",
+        "Use HTTP chunked uploads (reverse proxy)",
+    );
+
     let mount_label = StaticText::builder(&panel)
         .with_label(&t!("Icecast mount point"))
         .build();
@@ -173,6 +190,8 @@ pub fn show(app: &Rc<App>, frame: &Frame) {
     sizer.add(&server_input, 0, SizerFlag::Expand | SizerFlag::All, 4);
     sizer.add(&port_label, 0, SizerFlag::All, 4);
     sizer.add(&port_input, 0, SizerFlag::Expand | SizerFlag::All, 4);
+    sizer.add(&tls_input, 0, SizerFlag::All, 4);
+    sizer.add(&chunked_input, 0, SizerFlag::All, 4);
     sizer.add(&email_label, 0, SizerFlag::All, 4);
     sizer.add(&email_input, 0, SizerFlag::Expand | SizerFlag::All, 4);
     sizer.add(&password_label, 0, SizerFlag::All, 4);
@@ -226,6 +245,8 @@ pub fn show(app: &Rc<App>, frame: &Frame) {
             server_input.show(true);
             port_label.show(true);
             port_input.show(true);
+            tls_input.show(!audiopub);
+            chunked_input.show(!audiopub);
             mount_label.show(!audiopub);
             mount_input.show(!audiopub);
             username_label.show(!audiopub);
@@ -316,6 +337,8 @@ pub fn show(app: &Rc<App>, frame: &Frame) {
             password_input.set_value("");
             server_input.set_value("");
             port_input.set_value("");
+            tls_input.set_value(false);
+            chunked_input.set_value(false);
             mount_input.set_value("");
             username_input.set_value("");
             icecast_password_input.set_value("");
@@ -349,6 +372,8 @@ pub fn show(app: &Rc<App>, frame: &Frame) {
                 let (server, port) = service.icecast_endpoint();
                 server_input.set_value(&server);
                 port_input.set_value(&port.to_string());
+                tls_input.set_value(service.icecast_tls);
+                chunked_input.set_value(service.icecast_chunked);
                 mount_input.set_value(&service.icecast_mount);
                 username_input.set_value(&service.icecast_username);
                 icecast_password_input.set_value(service.icecast_password.as_str());
@@ -454,13 +479,18 @@ pub fn show(app: &Rc<App>, frame: &Frame) {
                 Ok((host, embedded)) => (host, embedded.unwrap_or(typed_port)),
                 Err(_) => (typed_server.clone(), typed_port),
             };
+            service.icecast_tls =
+                tls_input.get_value() || typed_server.to_ascii_lowercase().starts_with("https://");
+            service.icecast_chunked = chunked_input.get_value();
             service.icecast_server = server.clone();
             service.icecast_port = port;
             service.icecast_mount = mount_input.get_value().trim().to_string();
             service.icecast_username = username_input.get_value().trim().to_string();
             service.icecast_password = Secret::new(icecast_password_input.get_value());
             let id = service.id.clone();
+            let tls = service.icecast_tls;
             drop(config);
+            tls_input.set_value(tls);
             // After the borrow, not during it: writing to a widget is a call out
             // into wx, and nothing in this closure may hold `config` across one.
             if server != typed_server {
@@ -536,7 +566,11 @@ pub fn show(app: &Rc<App>, frame: &Frame) {
             {
                 let name = name.trim();
                 if name.is_empty() {
-                    show_error(&dialog_for_rename, &t!("Rename service"), &t!("Enter a nickname."));
+                    show_error(
+                        &dialog_for_rename,
+                        &t!("Rename service"),
+                        &t!("Enter a nickname."),
+                    );
                     return;
                 }
                 if let Some(service) = app.config.borrow_mut().connection.site_mut(&id) {
@@ -652,7 +686,9 @@ fn prompt_new_service(parent: &Dialog) -> Option<(String, StreamingServiceType)>
         .build();
     let panel = Panel::builder(&dialog).build();
     let sizer = BoxSizer::builder(Orientation::Vertical).build();
-    let nickname_label = StaticText::builder(&panel).with_label(&t!("Nickname")).build();
+    let nickname_label = StaticText::builder(&panel)
+        .with_label(&t!("Nickname"))
+        .build();
     let nickname_input = TextCtrl::builder(&panel).build();
     super::set_accessible_name(&nickname_input, &t!("Nickname"));
     super::help::tag(

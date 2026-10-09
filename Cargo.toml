@@ -69,6 +69,7 @@ reqwest = { version = "0.12", features = ["json", "cookies", "stream"] }
 # Only `StreamExt` is used; the default feature set pulls in far more.
 futures-util = { version = "0.3", default-features = false, features = ["std"] }
 thiserror = "2"
+tokio-native-tls = "0.3"
 
 # Edge and Star speak WebSocket, not HTTP. `native-tls` rather than rustls so
 # this shares reqwest's schannel-backed TLS stack instead of linking a second one.

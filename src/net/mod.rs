@@ -33,6 +33,8 @@ pub enum ServiceProfile {
         nickname: String,
         server: String,
         port: u16,
+        tls: bool,
+        chunked: bool,
         mount: String,
         username: String,
         password: Secret,
@@ -216,6 +218,8 @@ enum Connection {
     Icecast {
         server: String,
         port: u16,
+        tls: bool,
+        chunked: bool,
         mount: String,
         username: String,
         password: Secret,
@@ -277,6 +281,8 @@ fn audiopub_target_for(
     }
     Ok(IcecastTarget {
         host: format!("{server}:{port}"),
+        tls: false,
+        chunked: false,
         mount: identity.user_id.clone(),
         username: "source".to_string(),
         password: identity.stream_key.clone(),
@@ -291,6 +297,8 @@ fn direct_icecast_target(
     let Connection::Icecast {
         server,
         port,
+        tls,
+        chunked,
         mount,
         username,
         password,
@@ -321,6 +329,8 @@ fn direct_icecast_target(
     };
     Ok(IcecastTarget {
         host: format!("{host}:{port}"),
+        tls: *tls,
+        chunked: *chunked,
         mount,
         username,
         password: password.clone(),
@@ -453,6 +463,8 @@ async fn net_loop(mut commands: tokio_mpsc::UnboundedReceiver<NetCommand>, event
                         nickname,
                         server,
                         port,
+                        tls,
+                        chunked,
                         mount,
                         username,
                         password,
@@ -460,6 +472,8 @@ async fn net_loop(mut commands: tokio_mpsc::UnboundedReceiver<NetCommand>, event
                         let armed = Connection::Icecast {
                             server,
                             port,
+                            tls,
+                            chunked,
                             mount,
                             username,
                             password,
@@ -1033,7 +1047,7 @@ fn spawn_icecast_sender(
             loop {
                 match plan_retry(&error, attempt, started.elapsed()) {
                     Step::GiveUp { reason } => {
-                        log::error!("Icecast source: giving up ({reason})");
+                        log::error!("Icecast source: giving up ({error})");
                         let _ = events.send(NetEvent::StreamError {
                             message: t!(
                                 "The audio connection could not be restored: {reason}. \
@@ -1181,7 +1195,7 @@ async fn start_stream(
             let target = direct_icecast_target(conn, content_type)?;
             let icecast = IcecastConnection::connect(&target)
                 .await
-                .map_err(|e| e.to_string())?;
+                .map_err(|e| e.user_message())?;
             let icecast_task = spawn_icecast_sender(target, icecast, audio, events.clone());
 
             let stream_id = format!("icecast:{}", normalize_mount(mount));
@@ -1257,6 +1271,8 @@ mod chat_feed_tests {
         });
 
         let target = IcecastTarget {
+            tls: false,
+            chunked: false,
             host: addr.to_string(),
             mount: "user-123".into(),
             username: "source".into(),
@@ -1345,6 +1361,8 @@ mod chat_feed_tests {
         });
 
         let target = IcecastTarget {
+            tls: false,
+            chunked: false,
             host: addr.to_string(),
             mount: "u".into(),
             username: "source".into(),
@@ -1422,6 +1440,8 @@ mod chat_feed_tests {
         });
 
         let target = IcecastTarget {
+            tls: false,
+            chunked: false,
             host: addr.to_string(),
             mount: "u".into(),
             username: "source".into(),
@@ -1579,6 +1599,8 @@ mod host_tests {
     #[test]
     fn direct_icecast_target_uses_profile_fields() {
         let conn = Connection::Icecast {
+            tls: true,
+            chunked: true,
             server: "ice.example.org".to_string(),
             port: 9000,
             mount: "/live".to_string(),
@@ -1586,6 +1608,8 @@ mod host_tests {
             password: Secret::new("secret"),
         };
         let target = direct_icecast_target(&conn, "audio/aac").unwrap();
+        assert!(target.tls);
+        assert!(target.chunked);
         assert_eq!(target.host, "ice.example.org:9000");
         assert_eq!(target.mount, "live");
         assert_eq!(target.username, "dj");
@@ -1599,6 +1623,8 @@ mod host_tests {
     #[test]
     fn a_port_in_the_server_field_is_not_appended_twice() {
         let conn = Connection::Icecast {
+            tls: false,
+            chunked: false,
             server: "gomsen.com:8000".to_string(),
             port: 8000,
             mount: "live.mp3".to_string(),
@@ -1615,6 +1641,8 @@ mod host_tests {
     #[test]
     fn a_pasted_listen_url_reaches_the_right_host_and_port() {
         let conn = Connection::Icecast {
+            tls: false,
+            chunked: false,
             server: "http://ice.example.org:9000/live".to_string(),
             port: 8000,
             mount: "live".to_string(),
@@ -1628,6 +1656,8 @@ mod host_tests {
     #[test]
     fn direct_icecast_target_defaults_blank_username() {
         let conn = Connection::Icecast {
+            tls: false,
+            chunked: false,
             server: "ice.example.org".to_string(),
             port: 8000,
             mount: "live".to_string(),
@@ -1641,6 +1671,8 @@ mod host_tests {
     #[test]
     fn direct_icecast_target_accepts_the_root_mount() {
         let conn = Connection::Icecast {
+            tls: false,
+            chunked: false,
             server: "radio.example.org".to_string(),
             port: 8000,
             mount: "/".to_string(),

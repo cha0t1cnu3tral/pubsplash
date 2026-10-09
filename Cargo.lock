@@ -1759,6 +1759,7 @@ dependencies = [
  "sysinfo",
  "thiserror",
  "tokio",
+ "tokio-native-tls",
  "tokio-tungstenite",
  "toml",
  "urlencoding",

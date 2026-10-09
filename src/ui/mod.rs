@@ -2085,6 +2085,8 @@ pub fn service_profile_from_site(site: &SiteConfig) -> Result<ServiceProfile, St
                 nickname,
                 server,
                 port,
+                tls: site.icecast_tls || site.icecast_server.trim().to_ascii_lowercase().starts_with("https://"),
+                chunked: site.icecast_chunked,
                 mount: site.icecast_mount.trim().to_string(),
                 username: site.icecast_username(),
                 password: site.icecast_password.clone(),

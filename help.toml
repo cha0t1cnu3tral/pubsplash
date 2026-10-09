@@ -97,6 +97,12 @@ file = "src/ui/connect_dialog.rs"
 message = "Type the email address you use to log in to the selected Audiopub service."
 
 [[control]]
+id = "dialog.connect.icecastChunked"
+label = "Use HTTP chunked uploads (reverse proxy)"
+file = "src/ui/connect_dialog.rs"
+message = "Send the audio using HTTP chunked uploads when publishing through an HTTP reverse proxy such as Nginx. The proxy must allow streaming PUT uploads without request buffering. Leave disabled for older direct Icecast servers that do not support chunked uploads."
+
+[[control]]
 id = "dialog.connect.icecastMount"
 label = "Icecast mount point for the selected service"
 file = "src/ui/connect_dialog.rs"
@@ -119,6 +125,12 @@ id = "dialog.connect.icecastServer"
 label = "Icecast server for the selected service"
 file = "src/ui/connect_dialog.rs"
 message = "Type the Icecast server host or address, without the port."
+
+[[control]]
+id = "dialog.connect.icecastTls"
+label = "Use TLS (HTTPS)"
+file = "src/ui/connect_dialog.rs"
+message = "Encrypt the Icecast source connection and validate the server certificate. Enter the public certificate hostname and TLS port, usually 443. The port is not changed automatically. Leave disabled for a plain TCP connection."
 
 [[control]]
 id = "dialog.connect.icecastUsername"

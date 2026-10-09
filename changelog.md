@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Additions
+
+- Added certificate-validated TLS for direct Icecast source connections.
+- Added HTTP chunked uploads for Icecast reverse proxies.
+
 ## 0.2.0
 
 ### Additions
