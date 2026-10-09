@@ -3680,8 +3680,9 @@ msgctxt "dialog.connect.icecastChunked"
 msgid ""
 "Send the audio using HTTP chunked uploads when publishing through an "
 "HTTP reverse proxy such as Nginx. The proxy must allow streaming PUT "
-"uploads without request buffering. Leave disabled for older direct "
-"Icecast servers that do not support chunked uploads."
+"uploads without request buffering, and the upstream Icecast server must "
+"support chunked uploads. Leave disabled for older direct Icecast "
+"servers that do not support chunked uploads."
 msgstr ""
 
 #. Context help for the Icecast mount point for the selected service.

@@ -7,6 +7,10 @@
 - Added certificate-validated TLS for direct Icecast source connections.
 - Added HTTP chunked uploads for Icecast reverse proxies.
 
+### Changes
+
+- Updated Icecast connection help with TLS and reverse-proxy requirements.
+
 ## 0.2.0
 
 ### Additions

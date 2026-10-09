@@ -100,7 +100,7 @@ message = "Type the email address you use to log in to the selected Audiopub ser
 id = "dialog.connect.icecastChunked"
 label = "Use HTTP chunked uploads (reverse proxy)"
 file = "src/ui/connect_dialog.rs"
-message = "Send the audio using HTTP chunked uploads when publishing through an HTTP reverse proxy such as Nginx. The proxy must allow streaming PUT uploads without request buffering. Leave disabled for older direct Icecast servers that do not support chunked uploads."
+message = "Send the audio using HTTP chunked uploads when publishing through an HTTP reverse proxy such as Nginx. The proxy must allow streaming PUT uploads without request buffering, and the upstream Icecast server must support chunked uploads. Leave disabled for older direct Icecast servers that do not support chunked uploads."
 
 [[control]]
 id = "dialog.connect.icecastMount"
